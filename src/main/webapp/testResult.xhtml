@@ -1,0 +1,208 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:h="http://java.sun.com/jsf/html">
+	
+    <h:head>
+        <title>Taxi Scheduling</title>
+    </h:head>
+    <h:body>
+    	When using closest to:
+    	<h:form>
+			<h:outputLabel value="#{demoBean.closestStatus}"/>
+		</h:form>
+		When using Total Time:
+		<h2>Add your fare</h2>
+    	<h:form id="form">
+    	   Where would you like to be picked up? 
+    	   <h:inputText value="#{demoBean.pickupPoint}"></h:inputText>
+    	   <br></br>
+    	   Where would you like to be dropped off? 
+    	   <h:inputText value="#{demoBean.dropoffPoint}"></h:inputText>
+    	   <br></br>
+    	   Will you be sharing?
+    	   <h:selectOneRadio value="#{demoBean.share}">
+			<f:selectItem itemValue="true" itemLabel="Yes" />
+			<f:selectItem itemValue="false" itemLabel="No" />
+		</h:selectOneRadio>
+    	   <br></br>
+    	   How many will be travelling?
+    	   <h:inputText value="#{demoBean.passNum}"></h:inputText>
+    	   <br></br>
+    	   Would you like the quickest time to pickup or quickest time to destination?
+    	   <h:selectOneRadio value="#{demoBean.method}">
+			<f:selectItem itemValue="true" itemLabel="Quickest Pickup" />
+			<f:selectItem itemValue="false" itemLabel="Quickest Destination" />
+		</h:selectOneRadio>
+
+		<br></br>
+    	   <h:commandButton value="Test" action="#{demoBean.Demo()}"></h:commandButton>
+    	   
+    	   <br></br>
+			<br></br>
+			<script type="text/javascript">
+			function setUp(data) {
+				 if (data.status === 'success') {
+					 myVar = setInterval(myFunction, 10000);
+				    }
+			
+			}
+			</script>
+			<script type="text/javascript">
+			function myFunction(data) { 
+					 var button = document.getElementById("form:hdnBtn");
+						button.click();
+						console.log('got to end');
+						update();
+			
+			}
+			</script>
+    	   <h:commandButton  value="Run">
+    	   <f:ajax  onevent="setUp" />
+			 </h:commandButton>
+
+			<h:commandButton  value="Pause">
+			 <f:ajax  onevent="clearInterval(myVar)" />
+			 </h:commandButton>
+			 <br></br>
+			 <br></br>
+			 <h:commandButton  value="Finish Simulator" action="#{demoBean.Finish()}"></h:commandButton>
+			<h:commandButton id="hdnBtn" action="#{demoBean.Update(180)}" style="display:none"><f:ajax render="taxiStats taxiPoly"/></h:commandButton>
+			<h:commandButton id="hdnPolyLine" value="#{demoBean.polyline}" style="display:none"><f:ajax/></h:commandButton>
+			
+			<h:dataTable id="taxiStats" value="#{demoBean.getTaxiList()}" var="t">
+                <h:column>
+                    #{t.number}
+                </h:column>
+                <h:column>
+                    #{t.location}
+                </h:column>
+            </h:dataTable>
+            
+            <h:dataTable id="taxiPoly" value="#{demoBean.getTaxiList()}" var="t" style="display:none">
+                <h:column>
+                    #{t.polyLine}
+                </h:column>
+            </h:dataTable>
+			
+			<div id="googleMap" style="width:100%;height:400px;"></div>
+
+		<script  type="text/javascript">
+			var map;
+			var markers = [];
+			var polylines = [];
+			var colours = ['red', 'green', 'blue', 'orange', 'yellow' , 'black'];
+			function myMap() {
+				var mapProp = {
+					center : new google.maps.LatLng(52.66058260,-8.63209010),
+					zoom : 10,
+				};
+				map = new google.maps.Map(document
+						.getElementById("googleMap"), mapProp);
+				
+				 
+				 var table = document.getElementById("form:taxiStats");
+				 var polyTable =  document.getElementById("form:taxiPoly");
+				 
+				 var i;
+				 
+				 for(i = 0; i &lt; table.rows.length; i++){
+					 var latlngStr = table.rows[i].cells[1].innerHTML.split(",");
+					 var lat = parseFloat(latlngStr[0]);
+					 var lng = parseFloat(latlngStr[1]);
+					 
+					 var taxiLoc = new google.maps.LatLng(lat,lng);
+					 
+					 var taxi = new google.maps.Circle({
+						    center: taxiLoc,
+						    radius: 100,
+						    strokeColor: "#0000FF",
+						    strokeOpacity: 0.8,
+						    strokeWeight: 2,
+						    fillColor: "#0000FF",
+						    fillOpacity: 0.4
+						  });
+					 taxi.setMap(map);
+					 markers.push(taxi);
+					 
+					 
+					 var polyString = polyTable.rows[i].cells[0].innerHTML;
+					 polyString = polyString.trim();
+					 
+					 console.log(polyString);
+					 
+					 var polyline = new google.maps.Polyline({
+						    path: google.maps.geometry.encoding.decodePath(polyString),
+						    strokeColor: colours[i],
+						    strokeOpacity: 0.8,
+						    strokeWeight: 2,
+						    fillColor: colours[i],
+						    fillOpacity: 0.35
+						  });
+
+						  polyline.setMap(map);
+						  polylines.push(polyline);
+					 }
+					
+				
+				
+			}
+		</script>
+		
+		<script  type="text/javascript">
+			function update() {
+				
+				 var table = document.getElementById("form:taxiStats");
+				 
+				 var polyString;
+				 var polyTable =  document.getElementById("form:taxiPoly");
+
+				 var i;
+				 for(i = 0; i &lt; table.rows.length; i++){
+					 var latlngStr = table.rows[i].cells[1].innerHTML.split(",");
+					 var lat = parseFloat(latlngStr[0]);
+					 var lng = parseFloat(latlngStr[1]);
+					 
+					 markers[i].setMap(null);
+					 polylines[i].setMap(null);
+					 
+					 var taxiLoc = new google.maps.LatLng(lat,lng);
+					 
+					 var taxi = new google.maps.Circle({
+						    center: taxiLoc,
+						    radius: 100,
+						    strokeColor: "#0000FF",
+						    strokeOpacity: 0.8,
+						    strokeWeight: 2,
+						    fillColor: "#0000FF",
+						    fillOpacity: 0.4
+						  });
+					 markers[i] = taxi;
+					 markers[i].setMap(map);
+					 
+					 polyString = polyTable.rows[i].cells[0].innerHTML;
+					 polyString = polyString.trim();
+					 
+					 polyline = new google.maps.Polyline({
+						    path: google.maps.geometry.encoding.decodePath(polyString),
+						    strokeColor: colours[i],
+						    strokeOpacity: 0.8,
+						    strokeWeight: 2,
+						    fillColor: colours[i],
+						    fillOpacity: 0.35
+						  });
+
+					 polylines[i] = polyline;		
+					 polylines[i].setMap(map);
+						
+					 }
+					
+			}
+		</script>
+
+    <script src="https://maps.googleapis.com/maps/api/js?callback=myMap&amp;libraries=geometry&amp;key=AIzaSyCpto6czmXSCmH6FzaiHsX1OmuTi96ZRLE"></script>
+    	</h:form>
+	</h:body>
+</html>

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:h="http://java.sun.com/jsf/html">
+
+    <h:head>
+        <title>Create Simulator</title>
+    </h:head>
+    <h:body>
+    	<h2>Customise Simulator</h2>
+    	<h:form>
+    	   How many taxis would you like in your simulator?
+    	   <h:inputText value="#{demoBean.taxis}"></h:inputText>
+    	   <br></br>
+    	   Enter a new taxi location:
+    	   <h:inputText value="#{demoBean.startTaxi}"></h:inputText>
+    	   <h:commandButton value="Add Location" action="#{demoBean.addStartLocation()}"></h:commandButton>
+    	   <br></br>
+    	   Enter Simulator bounds:
+    	   <h:inputText value="#{demoBean.percentage}"></h:inputText>
+    	   <br></br>
+    	   <br></br>
+    	   <h:commandButton value="Initiate Simulator" action="#{demoBean.Initiate()}"></h:commandButton>
+    	</h:form>
+    </h:body>
+</html>

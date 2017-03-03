@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:h="http://java.sun.com/jsf/html">
+
+    <h:head>
+        <title>Results</title>
+    </h:head>
+    <h:body>
+    	<h2>Results</h2>
+    	<f:metadata>
+    		<f:viewParam name="simID" value="#{resultBean.simID}"  />
+    		<f:event type="preRenderView" listener="#{resultBean.Initiate()}" />
+		</f:metadata>
+    	<h:form>
+    	These results are for Sim <h:outputLabel id="simNum" value="#{resultBean.simID}"/>
+    	 <br></br>
+    	 <br></br>
+    	 <br></br>
+    	The longest fare was :
+    	  <h:outputLabel value="#{resultBean.GetMaxFareTime()}"/>
+    	  <br></br>
+    	  The shortest fare was :
+    	  <h:outputLabel value="#{resultBean.GetMinFareTime()}"/>
+    	  <br></br>
+    	  The longest time waited for a fare was :
+    	  <h:outputLabel value="#{resultBean.GetMaxWaitTime()}"/>
+    	  <br></br>
+    	   The shortest time waited for a fare was :
+    	  <h:outputLabel value="#{resultBean.GetMinWaitTime()}"/>
+    	  <br></br>
+    	  <br></br>
+    	  <br></br>
+    	  The average time waited for a fare was :
+    	  <h:outputLabel value="#{resultBean.GetAverageWaitTime()}"/>	
+    	  <br></br>
+    	  The average time taken for a fare was :
+    	  <h:outputLabel value="#{resultBean.GetAverageTripTime()}"/> 
+    	  <br></br>
+    	  <br></br>
+    	  <br></br>
+    	  <h:commandButton value="Redo Simulator" action="#{demoBean.Redo(resultBean.simID)}"></h:commandButton>
+    	</h:form>
+    </h:body>
+</html>

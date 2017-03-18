@@ -9,23 +9,30 @@
         <title>Taxi Scheduling</title>
     </h:head>
     <h:body>
-    	When using closest to:
-    	<h:form>
-			<h:outputLabel value="#{demoBean.closestStatus}"/>
-		</h:form>
-		When using Total Time:
-		<h2>Add your fare</h2>
     	<h:form id="form">
-    	   Where would you like to be picked up? 
+    		<h:outputLabel value="#{demoBean.closestStatus}"/>
+			<br></br>
+			Sim Time = 
+			<h:outputLabel id="time" value="#{demoBean.time}"/>
+			<br></br>
+ 			<h2>Add your fare</h2>
+    	   Where would passengers like to be picked up? 
     	   <h:inputText value="#{demoBean.pickupPoint}"></h:inputText>
     	   <br></br>
-    	   Where would you like to be dropped off? 
+    	   Where would passengers like to be dropped off? 
     	   <h:inputText value="#{demoBean.dropoffPoint}"></h:inputText>
     	   <br></br>
-    	   Will you be sharing?
+    	   Will Passengers be sharing?
     	   <h:selectOneRadio value="#{demoBean.share}">
 			<f:selectItem itemValue="true" itemLabel="Yes" />
 			<f:selectItem itemValue="false" itemLabel="No" />
+		</h:selectOneRadio>
+    	   <br></br>
+    	   What Traffic Model will be used?
+    	   <h:selectOneRadio value="#{demoBean.traffic}">
+			<f:selectItem itemValue="PESSIMISTIC" itemLabel="Pessimistic" />
+			<f:selectItem itemValue="BEST_GUESS" itemLabel="Best Guess" />
+			<f:selectItem itemValue="OPTIMISTIC" itemLabel="Optimistic" />
 		</h:selectOneRadio>
     	   <br></br>
     	   How many will be travelling?
@@ -69,7 +76,7 @@
 			 <br></br>
 			 <br></br>
 			 <h:commandButton  value="Finish Simulator" action="#{demoBean.Finish()}"></h:commandButton>
-			<h:commandButton id="hdnBtn" action="#{demoBean.Update(180)}" style="display:none"><f:ajax render="taxiStats taxiPoly"/></h:commandButton>
+			<h:commandButton id="hdnBtn" action="#{demoBean.Update(180)}" style="display:none"><f:ajax render="taxiStats taxiPoly time"/></h:commandButton>
 			<h:commandButton id="hdnPolyLine" value="#{demoBean.polyline}" style="display:none"><f:ajax/></h:commandButton>
 			
 			<h:dataTable id="taxiStats" value="#{demoBean.getTaxiList()}" var="t">

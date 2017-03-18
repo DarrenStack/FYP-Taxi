@@ -3,12 +3,15 @@ package testPart3;
 import javax.faces.bean.ManagedBean;
 import javax.faces.bean.SessionScoped;
 
+import org.joda.time.DateTime;
 
 import com.google.maps.model.Duration;
 
 import java.io.Serializable;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Time;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -19,7 +22,9 @@ public class demoBean  implements Serializable {
 	private static final long serialVersionUID = 1L;
 	
 	private String pickupPoint , dropoffPoint , share, 
-	passNum , taxis , startTaxi, closestStatus , polyline , method , percentage;
+	passNum , taxis , startTaxi, closestStatus 
+	, polyline , method , percentage , startTime ,
+	time , traffic;
 	private TaxiRank taxiList;
 	private TaxiStats taxiStatistics;
 	private ArrayList<String> startList = new ArrayList<String>();
@@ -27,6 +32,7 @@ public class demoBean  implements Serializable {
 	private int totalTime;
 	private boolean redo = false;
 	private ResultSet requests;
+	private LocalTime timeOfSim;
 	
 	private DatabaseManager db;
 	
@@ -41,6 +47,41 @@ public class demoBean  implements Serializable {
 		this.percentage = percentage;
 	}
 
+	
+
+	public String getTraffic() {
+		return traffic;
+	}
+
+
+
+	public void setTraffic(String traffic) {
+		this.traffic = traffic;
+	}
+
+
+
+	public String getStartTime() {
+		
+		return startTime;
+	}
+
+
+	public void setStartTime(String startTime) {
+		this.startTime = startTime;
+	}
+	
+	public String getTime() {
+		time = timeOfSim.toString();
+		return time;
+	}
+
+
+	public void setTime(String time) {
+		this.time = time;
+	}
+
+	
 
 
 	public String getMethod() {
@@ -164,18 +205,21 @@ public class demoBean  implements Serializable {
 		db = new DatabaseManager();
 		requestDetails = new ArrayList<String>();
 		
+		timeOfSim = LocalTime.parse(startTime);
+		
 		//sets up the taxis
 		taxiList = new TaxiRank(Integer.parseInt(taxis) , startList , percentage);
 		closestStatus = "";
 		// setting up taxis that already have fares
 		String origins = "Raheen, Limerick, Ireland" ;
 		String destinations =  "Castletroy, Limerick, Ireland" ;
-		Fare f1 = new Fare(false, origins, destinations, 2);
+		String traffic = "BEST_GUESS";
+		Fare f1 = new Fare(false, origins, destinations, 2 ,traffic , timeOfSim);
 		Taxi t1 = taxiList.getTaxi(0);
 		t1.addFare(f1);
 		origins =  "Monaleen, Limerick, Ireland" ;
 		destinations =  "Parteen, Limerick, Ireland" ;
-		Fare f2 = new Fare(false, origins, destinations, 3);
+		Fare f2 = new Fare(false, origins, destinations, 3 , traffic , timeOfSim);
 		Taxi t2 = taxiList.getTaxi(1);
 		t2.addFare(f2);
 		System.out.println(t1.toString());
@@ -193,13 +237,15 @@ public class demoBean  implements Serializable {
 	public void Demo() throws Exception{
 		
 			
-			String origins, destinations;
+			String origins, destinations , trafficModel;
 			boolean sharing = Boolean.parseBoolean(share);
 			int passengerNum = Integer.parseInt(passNum);
 			// Allowing new fare to be created
 			origins =  pickupPoint ;
 			destinations = dropoffPoint ;
-			Fare f3 = new Fare(sharing, origins, destinations, passengerNum);
+			trafficModel = traffic; 
+			Fare f3 = new Fare(sharing, origins, destinations,
+								passengerNum , trafficModel , timeOfSim);
 	
 			String insertionString = totalTime+"--"+origins+"--"+destinations+
 					"--"+passengerNum;
@@ -216,13 +262,14 @@ public class demoBean  implements Serializable {
 			//converts boolean to int
 			int val = sharing? 1 : 0;
 			insertionString += "--" + val;
+			System.out.print(traffic);
+			insertionString += "--"+trafficModel;
 			requestDetails.add(insertionString);
 				
 		
 	}
 	
 	public String simAll() throws Exception{
-		System.out.println("Size = " + requests.getFetchSize());
 		while(requests.next()){
 			//goes through all requests for sim wantd to be replicated
 			//and requests them at the same times with these new conditions
@@ -232,6 +279,7 @@ public class demoBean  implements Serializable {
 			pickupPoint = requests.getString(4);
 			dropoffPoint = requests.getString(5);
 			method = "" + requests.getInt(7);
+			traffic = requests.getString(9);
 			Demo();
 			
 		}
@@ -305,7 +353,8 @@ public class demoBean  implements Serializable {
 
 	public void Update(int secondsMoved) throws Exception {
 		// TODO Auto-generated method stub
-		System.out.print("Here now");
+		System.out.print("Time = " + getTime());
+		timeOfSim = timeOfSim.plusSeconds(secondsMoved);
 		totalTime += secondsMoved;
 		Taxi t;
 		for (int i = 0; i < taxiList.getTaxiAmount(); i++) {

@@ -115,8 +115,8 @@ public class DatabaseManager {
 			PreparedStatement ps
 			= con.prepareStatement(
 			"INSERT INTO requests (SimID , TimeOfRequest , Origin, "
-			+ "Destination, Passengers, Method, Sharing)"
-			+ "VALUES (?,?,?,?,?,?,?)");
+			+ "Destination, Passengers, Method, Sharing, Traffic)"
+			+ "VALUES (?,?,?,?,?,?,?,?)");
 			
 			ps.setInt(1, Integer.parseInt(pieces[0]));
 			ps.setInt(2, Integer.parseInt(pieces[1]));
@@ -125,6 +125,7 @@ public class DatabaseManager {
 			ps.setInt(5, Integer.parseInt(pieces[4]));
 			ps.setInt(6, Integer.parseInt(pieces[5]));
 			ps.setByte(7, Byte.parseByte(pieces[6]));
+			ps.setString(8, pieces[7]);
 			
 			System.out.println(insertionString);
 			
@@ -181,9 +182,10 @@ public class DatabaseManager {
 	}
 
 	public ResultSet getRequests(int simID) throws SQLException {
-		System.out.println(simID + "= SimID ");
+		
 		if(simID == 0)
 			simID = getNewSimID();
+		
 		con = ds.getConnection();
 		ResultSet result = null;
 		if(con != null){
@@ -195,6 +197,8 @@ public class DatabaseManager {
 			
 			result =  ps.executeQuery();
 	}
+		System.out.println(simID + "= SimID Size = ");
+		System.out.print(result.getFetchSize());
 		return result;
 	}
 

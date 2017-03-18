@@ -1,5 +1,7 @@
 package testPart3;
 
+import java.time.LocalTime;
+
 import com.google.maps.GeoApiContext;
 import com.google.maps.model.GeocodingResult;
 import com.google.maps.model.LatLng;
@@ -10,14 +12,27 @@ public class Fare {
 	private String origin;
 	private String destination;
 	private int numberOfPassengers;
+	private String trafficModel;
+	private LocalTime time;
 	private FareStats fareStat;
 	
-	public Fare(boolean willingToShare , String origin, String destination, int num){
+	public Fare(boolean willingToShare , String origin, String destination, 
+					int num , String trafficModel , LocalTime time){
 		this.willingToShare = willingToShare;
 		this.origin = origin;
 		this.destination = destination;
 		this.numberOfPassengers = num;
 		passedOrigin = false;
+		this.trafficModel = trafficModel;
+		this.time = time;
+	}
+
+	public String getTrafficModel() {
+		return trafficModel;
+	}
+
+	public LocalTime getTime() {
+		return time;
 	}
 
 	public boolean isWillingToShare() {

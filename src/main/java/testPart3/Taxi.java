@@ -1,29 +1,35 @@
 package testPart3;
 
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.ArrayList;
-import java.util.List;
+
+import org.joda.time.DateTime;
 
 import com.google.maps.DistanceMatrixApi;
+import com.google.maps.DistanceMatrixApiRequest;
 import com.google.maps.GeoApiContext;
-import com.google.maps.PlaceAutocompleteRequest.Response;
 import com.google.maps.model.DistanceMatrix;
 import com.google.maps.model.Duration;
 import com.google.maps.model.GeocodingResult;
 import com.google.maps.model.LatLng;
+import com.google.maps.model.TrafficModel;
+import com.google.maps.model.TransitMode;
+import com.google.maps.model.TravelMode;
 import com.google.maps.model.DirectionsLeg;
 import com.google.maps.model.DirectionsResult;
 import com.google.maps.model.DirectionsRoute;
 import com.google.maps.DirectionsApi;
 import com.google.maps.DirectionsApiRequest;
-import com.google.maps.GeocodingApi;
 
 public class Taxi {
 	
 	private ArrayList<Fare> Fares = new ArrayList<Fare>();
 	private ArrayList<FareStats> FareAnalytics = new ArrayList<FareStats>();
 	private ArrayList<Integer> legLengths;
+	private ArrayList<Duration> tempLegs;
 	private String location;
-	int secondsWithoutMovement;
+	private int secondsWithoutMovement;
 	private GeoApiContext context;
 	private DirectionsApiRequest route, bestRoute;
 	private double percent;
@@ -31,7 +37,7 @@ public class Taxi {
 	private DirectionsResult routeResult , tempResult;
 	private boolean  empty , quickPick , isActive , validPickup;
 	private int size , number , passengers , currentLeg, currentStep,
-				  travelTime , totalTime;
+				  travelTime , totalTime , legTime;
 	private String polyLine;
 
 	public Taxi(int size , int number, String newLocation , double percent) throws Exception{
@@ -43,6 +49,7 @@ public class Taxi {
 		polyLine = "";
 		passengers = 0; 
 		travelTime = 0; 
+		legTime = 0;
 		this.percent = percent;
 		LatLng latLngLocation;
 		
@@ -57,8 +64,38 @@ public class Taxi {
 		//finds best possible route for all stops in taxi
 		System.out.print("a");
 		bestRoute = null;
+		tempLegs = new ArrayList<Duration>();
 		//if no current fare
 		if(empty){
+			
+			String[] origins = new String[]{location , fare.getOrigin()};
+			String[] destinations = new String[]{fare.getOrigin() , fare.getDestination() };
+			
+			DistanceMatrixApiRequest request = DistanceMatrixApi.getDistanceMatrix(context, origins, destinations);
+			
+			//sets time of day to be sim time of tommorow since request needs
+			//to be in the future to allow use of traffic
+			LocalDate date = LocalDate.now();
+			LocalTime timeOfSim = fare.getTime();
+			date = date.plusDays(1);
+			DateTime dateTime = new DateTime(date.getYear(),date.getMonthValue(),
+											date.getDayOfMonth(),timeOfSim.getHour(),
+											timeOfSim.getMinute(), timeOfSim.getSecond());
+			request.departureTime(dateTime);
+			if(fare.getTrafficModel().equals("PESSIMISTIC"))
+				request.trafficModel(TrafficModel.PESSIMISTIC);
+			else if(fare.getTrafficModel().equals("OPTIMISTIC"))
+				request.trafficModel(TrafficModel.OPTIMISTIC);
+			else
+				request.trafficModel(TrafficModel.BEST_GUESS);
+			
+			request.mode(TravelMode.DRIVING);
+			
+			DistanceMatrix matrix= request.await();
+			
+			tempLegs.add(matrix.rows[0].elements[0].durationInTraffic);
+			tempLegs.add( matrix.rows[1].elements[1].durationInTraffic);
+			System.out.print(tempLegs.get(0));
 			bestRoute =	DirectionsApi.getDirections(context, location, fare.getDestination());
 			bestRoute = bestRoute.waypoints(fare.getOrigin());
 			return bestRoute;
@@ -104,7 +141,29 @@ public class Taxi {
 			}
 			routeOrigins[(Fares.size() * 2) + 2] = location;
 			
-			DistanceMatrix matrix=DistanceMatrixApi.getDistanceMatrix(context, routeOrigins, routeDest).await();
+			//sets up matrix with origins + destinations + traffic
+			
+			DistanceMatrixApiRequest request = DistanceMatrixApi.getDistanceMatrix(context, routeOrigins, routeDest);
+			
+			//sets time of day to be sim time of tommorow since request needs
+			//to be in the future to allow use of traffic
+			LocalDate date = LocalDate.now();
+			LocalTime timeOfSim = fare.getTime();
+			date = date.plusDays(1);
+			DateTime dateTime = new DateTime(date.getYear(),date.getMonthValue(),
+											date.getDayOfMonth(),timeOfSim.getHour(),
+											timeOfSim.getMinute(), timeOfSim.getSecond());
+			request.departureTime(dateTime);
+			if(fare.getTrafficModel().equals("PESSIMISTIC"))
+				request.trafficModel(TrafficModel.PESSIMISTIC);
+			else if(fare.getTrafficModel().equals("OPTIMISTIC"))
+				request.trafficModel(TrafficModel.OPTIMISTIC);
+			else
+				request.trafficModel(TrafficModel.BEST_GUESS);
+			
+			request.mode(TravelMode.DRIVING);
+			
+			DistanceMatrix matrix= request.await();
 			Long shortestTime , time;
 			shortestTime = null;
 			int temp;
@@ -137,16 +196,17 @@ public class Taxi {
 						positionTracker.remove(positionTracker.indexOf(movingNode));
 						positionTracker.add(j , movingNode);
 						
-						timeToFinishFirstFare = (int) matrix.rows[routeOrigins.length - 1].elements[positionTracker.get(0)].duration.inSeconds;
+						timeToFinishFirstFare = (int) matrix.rows[routeOrigins.length - 1].elements[positionTracker.get(0)].durationInTraffic.inSeconds;
 						found = false;
 						
-						time = matrix.rows[routeOrigins.length - 1].elements[positionTracker.get(0)].duration.inSeconds;
+						time = matrix.rows[routeOrigins.length - 1].elements[positionTracker.get(0)].durationInTraffic.inSeconds;
 						for (int l = 0; l < positionTracker.size() - 1; l++) {
 							time += matrix.rows[positionTracker.get(l)].elements[positionTracker
-									.get(l + 1)].duration.inSeconds;
+									.get(l + 1)].durationInTraffic.inSeconds;
+							System.out.print(time + "");
 							if(!(Fares.get(0).checkForDestination(routeDest[positionTracker.get(l)] , context)) && !found){
 								timeToFinishFirstFare += matrix.rows[positionTracker.get(l)].elements[positionTracker
-								                        .get(l + 1)].duration.inSeconds;
+								                        .get(l + 1)].durationInTraffic.inSeconds;
 								}
 						else
 							found = true;
@@ -155,11 +215,18 @@ public class Taxi {
 						if (shortestTime == null) {
 							if (withinBounds(timeToFinishFirstFare)) {
 								shortestTime = time;
+								//update length of legs of trip
+								
+								tempLegs.clear();
+								
+								tempLegs.add(matrix.rows[routeOrigins.length - 1].elements[positionTracker.get(0)].durationInTraffic);
+								
 								bestRoute = DirectionsApi.getDirections(context, location,
-
 										routeDest[positionTracker.get(positionTracker.size() - 1)]);
 								updatedWay = new String[positionTracker.size() - 1];
 								for (int n = 0; n < positionTracker.size() - 1; n++) {
+									tempLegs.add(matrix.rows[positionTracker.get(n)].elements[positionTracker
+									         									.get(n + 1)].durationInTraffic);
 									updatedWay[n] = routeOrigins[positionTracker.get(n)];
 								}
 
@@ -167,12 +234,19 @@ public class Taxi {
 						}
 						else if( time < shortestTime && withinBounds(timeToFinishFirstFare)){
 							shortestTime = time;
-							bestRoute = DirectionsApi.getDirections(context, location,
+							//update length of legs of trip
 							
-							routeDest[positionTracker.get(positionTracker.size() - 1)]);
+							tempLegs.clear();
+							
+							tempLegs.add(matrix.rows[routeOrigins.length - 1].elements[positionTracker.get(0)].durationInTraffic);
+							
+							bestRoute = DirectionsApi.getDirections(context, location,
+									routeDest[positionTracker.get(positionTracker.size() - 1)]);
 							updatedWay = new String[positionTracker.size() - 1];
-							for(int n = 0;n < positionTracker.size() - 1;n++){
-								updatedWay[n] = routeDest[positionTracker.get(n)];
+							for (int n = 0; n < positionTracker.size() - 1; n++) {
+								tempLegs.add(matrix.rows[positionTracker.get(n)].elements[positionTracker
+								         									.get(n + 1)].durationInTraffic);
+								updatedWay[n] = routeOrigins[positionTracker.get(n)];
 							}
 						}
 						
@@ -186,15 +260,16 @@ public class Taxi {
 					//if already picked up passengers for fare, 
 					//just look at time when destination is at end
 					System.out.println("d");
-					timeToFinishFirstFare = (int) matrix.rows[routeOrigins.length - 1].elements[positionTracker.get(0)].duration.inSeconds;
+					timeToFinishFirstFare = (int) matrix.rows[routeOrigins.length - 1].elements[positionTracker.get(0)].durationInTraffic.inSeconds;
 					found = false;
-					time = matrix.rows[routeOrigins.length - 1].elements[positionTracker.get(0)].duration.inSeconds;
+					time = matrix.rows[routeOrigins.length - 1].elements[positionTracker.get(0)].durationInTraffic.inSeconds;
 					for (int l = 0; l < positionTracker.size() - 1; l++) {
 						time += matrix.rows[positionTracker.get(l)].elements[positionTracker
-								.get(l + 1)].duration.inSeconds;
+								.get(l + 1)].durationInTraffic.inSeconds;
+						System.out.print(time + "");
 						if(!(Fares.get(0).checkForDestination(routeDest[positionTracker.get(l)] , context)) && !found){
 								timeToFinishFirstFare += matrix.rows[positionTracker.get(l)].elements[positionTracker
-								                        .get(l + 1)].duration.inSeconds;
+								                        .get(l + 1)].durationInTraffic.inSeconds;
 								}
 						else
 							found = true;
@@ -205,26 +280,42 @@ public class Taxi {
 					if (shortestTime == null) {
 						if (withinBounds(timeToFinishFirstFare)) {
 							shortestTime = time;
+							//update length of legs of trip
+							
+							tempLegs.clear();
+							
+							tempLegs.add(matrix.rows[routeOrigins.length - 1].elements[positionTracker.get(0)].durationInTraffic);
+							
 							bestRoute = DirectionsApi.getDirections(context, location,
-
 									routeDest[positionTracker.get(positionTracker.size() - 1)]);
 							updatedWay = new String[positionTracker.size() - 1];
 							for (int n = 0; n < positionTracker.size() - 1; n++) {
-								updatedWay[n] = routeDest[positionTracker.get(n)];
-								System.out.println(updatedWay[n]);
+								tempLegs.add(matrix.rows[positionTracker.get(n)].elements[positionTracker
+								         									.get(n + 1)].durationInTraffic);
+								updatedWay[n] = routeOrigins[positionTracker.get(n)];
 							}
+							
+							
 						}
 					}
 					else if( time < shortestTime && withinBounds(timeToFinishFirstFare)){
 						shortestTime = time; 
-						bestRoute = DirectionsApi.getDirections(context, location,
+						//update length of legs of trip
 						
-						routeDest[positionTracker.get(positionTracker.size() - 1)]);
+						tempLegs.clear();
+						
+						tempLegs.add(matrix.rows[routeOrigins.length - 1].elements[positionTracker.get(0)].durationInTraffic);
+						
+						bestRoute = DirectionsApi.getDirections(context, location,
+								routeDest[positionTracker.get(positionTracker.size() - 1)]);
 						updatedWay = new String[positionTracker.size() - 1];
-						for(int n = 0;n < positionTracker.size() - 1;n++){
-							updatedWay[n] = routeDest[positionTracker.get(n)];
-							System.out.println(updatedWay[n]); 
+						for (int n = 0; n < positionTracker.size() - 1; n++) {
+							tempLegs.add(matrix.rows[positionTracker.get(n)].elements[positionTracker
+							         									.get(n + 1)].durationInTraffic);
+							updatedWay[n] = routeOrigins[positionTracker.get(n)];
 						}
+						
+						
 					}
 				}
 				//resets position tracker to original destination points
@@ -235,15 +326,28 @@ public class Taxi {
 			if(shortestTime == null){
 				bestRoute = DirectionsApi.getDirections(context, location,
 						fare.getDestination());
+				tempLegs.clear();
+				
+				
+				
 				if(Fares.get(0).isPassedOrigin()){
 					updatedWay = new String[]{Fares.get(0).getDestination() ,fare.getOrigin()};
+					tempLegs.add(matrix.rows[routeOrigins.length-1].elements[3].durationInTraffic);
+					tempLegs.add(matrix.rows[3].elements[0].durationInTraffic);
+					tempLegs.add(matrix.rows[0].elements[1].durationInTraffic);
 				}
 				else{
 					updatedWay = new String[]{Fares.get(0).getOrigin(),
 							Fares.get(0).getDestination(),fare.getOrigin()};
+					tempLegs.add(matrix.rows[routeOrigins.length-1].elements[2].durationInTraffic);
+					tempLegs.add(matrix.rows[2].elements[3].durationInTraffic);
+					tempLegs.add(matrix.rows[3].elements[0].durationInTraffic);
+					tempLegs.add(matrix.rows[0].elements[1].durationInTraffic);
 				}
 				validPickup = false;
 			}
+			
+			
 			
 			bestRoute.waypoints(updatedWay);
 			return bestRoute;
@@ -272,21 +376,19 @@ public class Taxi {
 	public void addFare(Fare fare) throws Exception{
 		isActive = true;
 		passengers += fare.getNumberOfPassengers();
+		
+		
+		
 		//update route of taxi to use both routes
 		if(empty){
+			getBestRoute(fare);
 			empty = false;
-			route =	DirectionsApi.getDirections(context, location, fare.getDestination());
-			route = route.waypoints(fare.getOrigin());
-			routeResult = route.await();
+			tempResult = bestRoute.await();
 		}
-		else if(quickPick){
-			 route = bestRoute;
-			 routeResult = tempResult;
-		}
-		else{
-			route = bestRoute;
-			routeResult = tempResult;
-		}
+		
+		route = bestRoute;
+		routeResult = tempResult;
+		
 		fare.makeStats(travelTime, fare.getNumberOfPassengers());
 		Fares.add(fare);
 		
@@ -295,9 +397,7 @@ public class Taxi {
 		legLengths = new ArrayList<Integer>();
 		DirectionsRoute r = routeResult.routes[0];
 		for (int i = currentLeg; i < r.legs.length; i++) {
-			for (int j = 0; j < r.legs[i].steps.length; j++) {
-				distanceToEnd += (int)r.legs[i].steps[j].duration.inSeconds;
-			}
+			distanceToEnd += (int)r.legs[i].duration.inSeconds;
 			legLengths.add(distanceToEnd);
 			distanceToEnd = 0;
 		}
@@ -307,8 +407,11 @@ public class Taxi {
 			System.out.println("Waypoints:" + routeResult.routes[0].legs[d].endAddress + "\n");
 		currentStep = 0;
 		currentLeg = 0;
+		legTime = 0;
 		System.out.println("Waypoint number = " +routeResult.geocodedWaypoints.length);
+	
 	}
+
 	
 	public void removeFare(Fare fare ){
 		Fares.remove(fare);
@@ -341,6 +444,7 @@ public class Taxi {
 		if(isActive){
 			secondsWithoutMovement += secondsMoved;
 			travelTime += secondsMoved;
+			legTime += secondsMoved;
 		}
 		
 		int  stepMovement = 0;
@@ -349,50 +453,62 @@ public class Taxi {
 		for (int i = currentLeg; i < r.legs.length && !foundPoint; i++) {
 				l = r.legs[i];
 				for (int j = currentStep; j < l.steps.length; j++) {
-					stepMovement += l.steps[j].duration.inSeconds;
-					//if they have moved step in allocated time than update location
-					if (stepMovement > secondsWithoutMovement) {
-						location = l.steps[j].startLocation.toString();
-						//if taxi has moved to new step let the amount of movement be reset
-						if(currentLeg != i || currentStep != j)
-							secondsWithoutMovement = 0;
-						if(currentLeg != i){
+					if(legTime > tempLegs.get(i).inSeconds){
+						
+						//as long as it isn't the last leg
+						while(i < r.legs.length && legTime > tempLegs.get(i).inSeconds ){
+							System.out.println(i + ": " + legTime + " Leg Time: " + tempLegs.get(i).inSeconds);
+							passengerUpdate(r.legs[i].endAddress);
+							currentLeg = i;
 							currentStep = 0;
-							location = l.steps[0].startLocation.toString();
-							try {
-								passengerUpdate(r.legs[i].startAddress);
-							} catch (Exception e) {
-								// TODO Auto-generated catch block
-								e.printStackTrace();
-							}
-						}
-						else 
+							foundPoint = true;
+							secondsWithoutMovement = (int) (legTime - tempLegs.get(i).inSeconds);
+							legTime = (int) (legTime - tempLegs.get(i).inSeconds);
+							//check if  remaining legTime smaller than next 
+							//leg. If not keep checking
+							i++;
+						}	
+						j = l.steps.length;
+					}
+					else{
+					stepMovement += l.steps[j].duration.inSeconds;
+					// if they have moved step in allocated time than update
+					// location
+					if (stepMovement > secondsWithoutMovement) {
+						
+						// if taxi has moved to new step let the amount of
+						// movement be reset
+						if (currentLeg != i || currentStep != j)
+							secondsWithoutMovement = 0;
+						//LIMITATION:to reach the if here, the taxi has 
+						//arrived too early and hasn't taken traffic into
+						//account because google didn't like using traffic
+						//for directions. THis holds the taxi so it arrives
+						//on time
+						if (currentLeg != i) 
+							currentLeg = i;
+						else{
 							currentStep = j;
-							
-						foundPoint = true;	
-						currentLeg = i;
+							location = l.steps[j].startLocation.toString();
+						}
+
+						foundPoint = true;
 						i = r.legs.length;
 						j = l.steps.length;
-						
-					}
-					else if (currentLeg != r.legs.length - 1){
+
+					} else if (currentLeg != r.legs.length - 1) {
+						//in case taxi jumps too far and misses out on a place
 						long timeToNextStop = (long) 0;
-						for(int n = currentStep;n < l.steps.length;n++){
+						for (int n = currentStep; n < l.steps.length; n++) {
 							timeToNextStop += l.steps[n].duration.inSeconds;
 						}
-						if(secondsWithoutMovement > timeToNextStop){
-							i++;
-							l = r.legs[i];
-							currentLeg = i;
-							j = 0;
-							try {
-								passengerUpdate(r.legs[currentLeg].startAddress);
-							} catch (Exception e) {
-								// TODO Auto-generated catch block
-								e.printStackTrace();
-							}
-						}			
+						if (secondsWithoutMovement > timeToNextStop) {
+							i = r.legs.length;
+							j = l.steps.length;
+						}
+						foundPoint = true;
 					}
+				}
 						
 				}
 		}
@@ -404,7 +520,7 @@ public class Taxi {
 			System.out.println(secondsWithoutMovement + "Finished");
 			passengerUpdate(r.legs[(r.legs.length - 1)].endAddress);
 			polyLine = "";
-			secondsWithoutMovement = 0;
+			
 		}
 			
 
@@ -423,18 +539,20 @@ public class Taxi {
 		correctTime = travelTime - offset;
 		//checks if stop was pickup or destination
 		for(int i = 0; i < Fares.size();i++){
+			
 			if(Fares.get(i).checkForPickup(point , context)){
 				System.out.print(i + " PickupTime " + correctTime);
 				Fares.get(i).setPickup(correctTime);
 			}
 			else if(Fares.get(i).checkForDestination(point , context)){
-				//if destination then fare is removed
-				System.out.print(i + " PickupTime " + correctTime);
-				Fares.get(i).setDropoff(correctTime);
-				removeFare(Fares.get(i));
-			}
+					//if destination then fare is removed
+					System.out.print(i + " DropOff " + correctTime);
+					Fares.get(i).setDropoff(correctTime);
+					removeFare(Fares.get(i));
+				}
 		}
 		System.out.println("\nCurrently: " + passengers);
+		secondsWithoutMovement = 0;
 	}
 	
 	public Duration evaluateFare(Fare fare) throws Exception {  
@@ -468,8 +586,10 @@ public class Taxi {
 		  DirectionsRoute r = tempResult.routes[0];
 		  boolean found = false;
 			  for (int i = 0; i < r.legs.length && !found; i++) {
-					if(!(fare.getOrigin().equals(r.legs[i].startAddress)))
-						time += r.legs[i].duration.inSeconds;
+					if(!(fare.checkForPickup(r.legs[i].startAddress, context)))
+						time += tempLegs.get(i).inSeconds;
+					else 
+						found = true;
 				}
 			  shortest = new Duration();
 			  shortest.inSeconds = time;
@@ -487,10 +607,15 @@ public class Taxi {
 		getBestRoute(fare);
 
 		tempResult = bestRoute.await();
+		boolean found = false;
 		Long shortest;
 		shortest = tempResult.routes[0].legs[0].duration.inSeconds;
-		for (int i = 1; i < tempResult.routes[0].legs.length; i++)
-			shortest += tempResult.routes[0].legs[i].duration.inSeconds;
+		for (int i = 0; i < tempResult.routes[0].legs.length && !found; i++){
+			if(!(fare.checkForDestination(tempResult.routes[0].legs[i].startAddress, context)))
+				shortest += tempLegs.get(i).inSeconds;
+			else 
+				found = true;
+		}
 
 		return shortest;
 	}
@@ -503,9 +628,7 @@ public class Taxi {
 			DirectionsRoute r = routeResult.routes[0];
 			for (int i = currentLeg; i < r.legs.length; i++) {
 				l = r.legs[i];
-				for (int j = 0; j < l.steps.length; j++) {
-					distanceToEnd += (int)l.steps[j].duration.inSeconds;
-				}
+				distanceToEnd += (int)tempLegs.get(i).inSeconds - legTime;
 				//sets it up so there should be no offset so time is accurate
 				travelTime += distanceToEnd;
 				secondsWithoutMovement += distanceToEnd;
@@ -513,6 +636,7 @@ public class Taxi {
 				passengerUpdate(l.endAddress);
 				secondsWithoutMovement = 0;
 				currentStep = 0;
+				legTime = 0;
 			}
 			
 			

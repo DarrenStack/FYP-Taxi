@@ -15,9 +15,12 @@ public class Fare {
 	private String trafficModel;
 	private LocalTime time;
 	private FareStats fareStat;
+	private GeocodingResult[] resultPickup , resultDropoff;
 	
 	public Fare(boolean willingToShare , String origin, String destination, 
-					int num , String trafficModel , LocalTime time){
+					int num , String trafficModel , LocalTime time) throws Exception{
+		GeoApiContext context = new GeoApiContext();
+		context.setApiKey("AIzaSyCpto6czmXSCmH6FzaiHsX1OmuTi96ZRLE");
 		this.willingToShare = willingToShare;
 		this.origin = origin;
 		this.destination = destination;
@@ -25,6 +28,8 @@ public class Fare {
 		passedOrigin = false;
 		this.trafficModel = trafficModel;
 		this.time = time;
+		resultPickup = com.google.maps.GeocodingApi.geocode(context, this.origin).await();
+		resultDropoff = com.google.maps.GeocodingApi.geocode(context, this.destination).await();
 	}
 
 	public String getTrafficModel() {
@@ -72,11 +77,9 @@ public class Fare {
 	}
 	
 	public boolean checkForPickup(String point , GeoApiContext context) throws Exception{
-		LatLng latLngLocation;
-		GeocodingResult[] results = com.google.maps.GeocodingApi.geocode(context, origin).await();
-		latLngLocation = results[0].geometry.location;
-		System.out.println("Comparing " + point + " to " + results[0].formattedAddress);
-		if(results[0].formattedAddress.equals(point)){
+		
+		System.out.println("Comparing " + point + " to " + resultPickup[0].formattedAddress);
+		if(resultPickup[0].formattedAddress.equals(point)){
 			passedOrigin = true;
 			System.out.println("worked");
 			return true;
@@ -86,17 +89,23 @@ public class Fare {
 	}
 	
 	public boolean checkForDestination(String point , GeoApiContext context) throws Exception{
-		LatLng latLngLocation;
-		GeocodingResult[] results = com.google.maps.GeocodingApi.geocode(context, destination).await();
-		latLngLocation = results[0].geometry.location;
-		System.out.println("Comparing " + point + " to " + results[0].formattedAddress);
-		if(results[0].formattedAddress.equals(point)){
+		
+		System.out.println("Comparing " + point + " to " + resultDropoff[0].formattedAddress);
+		if(resultDropoff[0].formattedAddress.equals(point)){
 			passedOrigin = true;
 			System.out.println("worked");
 			return true;
 		}
 		else
 			return false;
+	}
+	
+	public LatLng getPickupLatLng(){
+		return resultPickup[0].geometry.location;
+	}
+	
+	public LatLng getDropoffLatLng(){
+		return resultDropoff[0].geometry.location;
 	}
 	
 	public void makeStats(int time , int passengers){

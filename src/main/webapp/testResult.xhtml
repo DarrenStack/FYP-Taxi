@@ -2,54 +2,80 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml"
-      xmlns:f="http://java.sun.com/jsf/core"
-      xmlns:h="http://java.sun.com/jsf/html">
-	
-    <h:head>
-        <title>Taxi Scheduling</title>
-    </h:head>
-    <h:body>
-    	<h:form id="form">
-    		<h:outputLabel value="#{demoBean.closestStatus}"/>
-			<br></br>
+	xmlns:f="http://java.sun.com/jsf/core"
+	xmlns:h="http://java.sun.com/jsf/html">
+
+<h:head>
+	<title>Taxi Scheduling</title>
+</h:head>
+<h:body>
+	<h:form id="form">
+		<h:outputLabel value="#{demoBean.closestStatus}" />
+		<div class="details">
+		<br></br>
 			Sim Time = 
-			<h:outputLabel id="time" value="#{demoBean.time}"/>
-			<br></br>
- 			<h2>Add your fare</h2>
+			<h:outputLabel id="time" value="#{demoBean.time}" />
+		<br></br>
+		
+		<h2>Add your fare</h2>
+    	
     	   Where would passengers like to be picked up? 
     	   <h:inputText value="#{demoBean.pickupPoint}"></h:inputText>
-    	   <br></br>
+		
+		<br></br>
     	   Where would passengers like to be dropped off? 
     	   <h:inputText value="#{demoBean.dropoffPoint}"></h:inputText>
-    	   <br></br>
+		
+		<br></br>
     	   Will Passengers be sharing?
-    	   <h:selectOneRadio value="#{demoBean.share}">
+    	   <h:selectOneRadio required="true" value="#{demoBean.share}">
 			<f:selectItem itemValue="true" itemLabel="Yes" />
 			<f:selectItem itemValue="false" itemLabel="No" />
 		</h:selectOneRadio>
-    	   <br></br>
+		
+		<br></br>
     	   What Traffic Model will be used?
-    	   <h:selectOneRadio value="#{demoBean.traffic}">
+    	   <h:selectOneRadio required="true" value="#{demoBean.traffic}">
 			<f:selectItem itemValue="PESSIMISTIC" itemLabel="Pessimistic" />
 			<f:selectItem itemValue="BEST_GUESS" itemLabel="Best Guess" />
 			<f:selectItem itemValue="OPTIMISTIC" itemLabel="Optimistic" />
 		</h:selectOneRadio>
-    	   <br></br>
+		
+		<br></br>
     	   How many will be travelling?
-    	   <h:inputText value="#{demoBean.passNum}"></h:inputText>
-    	   <br></br>
+    	   <h:inputText value="#{demoBean.passNum}" validatorMessage="Please enter passenger number between 1 and 4">
+    	    <f:validateLongRange minimum = "1" maximum = "4" />
+    	   </h:inputText>
+    	   
+		<br></br>
     	   Would you like the quickest time to pickup or quickest time to destination?
-    	   <h:selectOneRadio value="#{demoBean.method}">
+    	   <h:selectOneRadio required="true" value="#{demoBean.method}">
 			<f:selectItem itemValue="true" itemLabel="Quickest Pickup" />
 			<f:selectItem itemValue="false" itemLabel="Quickest Destination" />
 		</h:selectOneRadio>
+		<br></br>
+		</div>
+		<div class="OneRequest">
+		<h:commandButton value="Test" action="#{demoBean.Demo()}"></h:commandButton>
+		</div>
+		
+		
+		<div class="multRequest">
+		How many multiple instances of this fare would you like to simulate?
+    	    <h:inputText value="#{demoBean.multiple}"></h:inputText>
+		<br></br>
+		Over the course of how many minutes should these fares be called (minutes)?
+    	    <h:inputText value="#{demoBean.multipleTime}"></h:inputText>
+   		
+   		<br></br>
+    	<h:commandButton value="Request Multiple" action="#{demoBean.Multiply()}"></h:commandButton>
+		</div>
+		
+		
 
 		<br></br>
-    	   <h:commandButton value="Test" action="#{demoBean.Demo()}"></h:commandButton>
-    	   
-    	   <br></br>
-			<br></br>
-			<script type="text/javascript">
+		<br></br>
+		<script type="text/javascript">
 			function setUp(data) {
 				 if (data.status === 'success') {
 					 myVar = setInterval(myFunction, 10000);
@@ -57,7 +83,7 @@
 			
 			}
 			</script>
-			<script type="text/javascript">
+		<script type="text/javascript">
 			function myFunction(data) { 
 					 var button = document.getElementById("form:hdnBtn");
 						button.click();
@@ -66,37 +92,48 @@
 			
 			}
 			</script>
-    	   <h:commandButton  value="Run">
-    	   <f:ajax  onevent="setUp" />
-			 </h:commandButton>
+		<h:commandButton value="Run">
+			<f:ajax onevent="setUp" />
+		</h:commandButton>
 
-			<h:commandButton  value="Pause">
-			 <f:ajax  onevent="clearInterval(myVar)" />
-			 </h:commandButton>
-			 <br></br>
-			 <br></br>
-			 <h:commandButton  value="Finish Simulator" action="#{demoBean.Finish()}"></h:commandButton>
-			<h:commandButton id="hdnBtn" action="#{demoBean.Update(180)}" style="display:none"><f:ajax render="taxiStats taxiPoly time"/></h:commandButton>
-			<h:commandButton id="hdnPolyLine" value="#{demoBean.polyline}" style="display:none"><f:ajax/></h:commandButton>
-			
-			<h:dataTable id="taxiStats" value="#{demoBean.getTaxiList()}" var="t">
-                <h:column>
+		<h:commandButton value="Pause">
+			<f:ajax onevent="clearInterval(myVar)" />
+		</h:commandButton>
+		<br></br>
+		<br></br>
+		<h:commandButton value="Finish Simulator"
+			action="#{demoBean.Finish()}"></h:commandButton>
+		<h:commandButton id="hdnBtn" action="#{demoBean.Update(180)}"
+			style="display:none">
+			<f:ajax render="taxiStats taxiPoly time" />
+		</h:commandButton>
+		<h:commandButton id="hdnPolyLine" value="#{demoBean.polyline}"
+			style="display:none">
+			<f:ajax />
+		</h:commandButton>
+
+		<h:dataTable id="taxiStats" value="#{demoBean.getTaxiList()}" var="t">
+			<h:column>
                     #{t.number}
                 </h:column>
-                <h:column>
+			<h:column>
                     #{t.location}
                 </h:column>
-            </h:dataTable>
-            
-            <h:dataTable id="taxiPoly" value="#{demoBean.getTaxiList()}" var="t" style="display:none">
                 <h:column>
+                    #{t.isActive}
+                </h:column>
+		</h:dataTable>
+
+		<h:dataTable id="taxiPoly" value="#{demoBean.getTaxiList()}" var="t"
+			style="display:none">
+			<h:column>
                     #{t.polyLine}
                 </h:column>
-            </h:dataTable>
-			
-			<div id="googleMap" style="width:100%;height:400px;"></div>
+		</h:dataTable>
 
-		<script  type="text/javascript">
+		<div class="mapClass" id="googleMap" style="width: 100%; height: 400px;"></div>
+
+		<script type="text/javascript">
 			var map;
 			var markers = [];
 			var polylines = [];
@@ -157,8 +194,8 @@
 				
 			}
 		</script>
-		
-		<script  type="text/javascript">
+
+		<script type="text/javascript">
 			function update() {
 				
 				 var table = document.getElementById("form:taxiStats");
@@ -168,6 +205,8 @@
 
 				 var i;
 				 for(i = 0; i &lt; table.rows.length; i++){
+					 var active = table.rows[i].cells[2].innerText;
+					 if(active == "true"){
 					 var latlngStr = table.rows[i].cells[1].innerHTML.split(",");
 					 var lat = parseFloat(latlngStr[0]);
 					 var lng = parseFloat(latlngStr[1]);
@@ -205,11 +244,13 @@
 					 polylines[i].setMap(map);
 						
 					 }
+				 }
 					
 			}
 		</script>
 
-    <script src="https://maps.googleapis.com/maps/api/js?callback=myMap&amp;libraries=geometry&amp;key=AIzaSyCpto6czmXSCmH6FzaiHsX1OmuTi96ZRLE"></script>
-    	</h:form>
-	</h:body>
+		<script
+			src="https://maps.googleapis.com/maps/api/js?callback=myMap&amp;libraries=geometry&amp;key=AIzaSyCpto6czmXSCmH6FzaiHsX1OmuTi96ZRLE"></script>
+	</h:form>
+</h:body>
 </html>

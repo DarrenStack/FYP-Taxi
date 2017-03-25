@@ -5,7 +5,10 @@ import javax.faces.bean.SessionScoped;
 
 import org.joda.time.DateTime;
 
+import com.google.maps.GeoApiContext;
 import com.google.maps.model.Duration;
+import com.google.maps.model.GeocodingResult;
+import com.google.maps.model.LatLng;
 
 import java.io.Serializable;
 import java.sql.ResultSet;
@@ -21,15 +24,19 @@ public class demoBean  implements Serializable {
 	
 	private static final long serialVersionUID = 1L;
 	
+	
+	
 	private String pickupPoint , dropoffPoint , share, 
 	passNum , taxis , startTaxi, closestStatus 
 	, polyline , method , percentage , startTime ,
-	time , traffic;
+	time , traffic , multiple , multipleTime;
 	private TaxiRank taxiList;
 	private TaxiStats taxiStatistics;
 	private ArrayList<String> startList = new ArrayList<String>();
 	private ArrayList<String> requestDetails;
+	private ArrayList<Multiples> multipleList;
 	private int totalTime;
+	private double benchmark;
 	private boolean redo = false;
 	private ResultSet requests;
 	private LocalTime timeOfSim;
@@ -48,6 +55,30 @@ public class demoBean  implements Serializable {
 	}
 
 	
+
+	public String getMultiple() {
+		return multiple;
+	}
+
+
+
+	public void setMultiple(String multiple) {
+		this.multiple = multiple;
+	}
+
+
+
+	public String getMultipleTime() {
+		return multipleTime;
+	}
+
+
+
+	public void setMultipleTime(String multipleTime) {
+		this.multipleTime = multipleTime;
+	}
+
+
 
 	public String getTraffic() {
 		return traffic;
@@ -192,6 +223,7 @@ public class demoBean  implements Serializable {
 
 	
 	public void addStartLocation(){
+		
 		startList.add(startTaxi);
 	}
 	
@@ -204,6 +236,7 @@ public class demoBean  implements Serializable {
 		totalTime = 0;
 		db = new DatabaseManager();
 		requestDetails = new ArrayList<String>();
+		multipleList = new ArrayList<Multiples>();
 		
 		timeOfSim = LocalTime.parse(startTime);
 		
@@ -288,21 +321,38 @@ public class demoBean  implements Serializable {
 	
 	public void quickestPickup(Fare f3) throws Exception{
 		Taxi t;
+		int availableTaxis = 0;
+		ArrayList<Taxi> checked = new ArrayList<Taxi>();
 		// find closest taxi to the person
-		Duration shortest = null, compare;
+		Long shortest = null, compare;
 		//System.out.println("Amount of taxis = " +  taxiList.getTaxiAmount());
 		int index = 0;
 		for (int i = 0; i < taxiList.getTaxiAmount(); i++) {
 			System.out.print(i);
 			t = taxiList.getTaxi(i);
 			if (t.available(f3)) {
-				compare = t.evaluateFare(f3);
-				if (shortest == null) {
-					shortest = compare;
-					index = i;
-				} else if (compare.inSeconds < shortest.inSeconds) {
-					shortest = compare;
-					index = i;
+				availableTaxis++;
+				int duplicate = (hasBeenChecked(t, checked));
+				if (duplicate == -1) {
+					checked.add(t);
+
+					if (shortest == null) {
+						compare = t.evaluateFare(f3);
+						shortest = compare;
+						index = i;
+						benchmark = t.getTaxiDistance(f3.getPickupLatLng());
+					} else if (isConsiderable(t, f3, benchmark)) {
+						System.out.println("\n" + t.getNumber() + " was considered");
+						compare = t.evaluateFare(f3);
+						if (compare < shortest) {
+							shortest = compare;
+							index = i;
+						}
+					} else if (duplicate == index) {
+						Taxi t2 = taxiList.getTaxi(duplicate);
+						if (t2.getPassengerNum() > t.getPassengerNum())
+							index = i;
+					}
 				}
 			}
 		}
@@ -311,7 +361,10 @@ public class demoBean  implements Serializable {
 			t.addFare(f3);
 			closestStatus = "The closest taxi is " + t.toString() + 
 							 ". Time to pickup: " + shortest;
-		} else
+		}
+		else if(availableTaxis == 0)
+			closestStatus = "No taxis currently available, please try again later";
+		 else
 			closestStatus = "taxi is here";
 	}
 	
@@ -320,6 +373,8 @@ public class demoBean  implements Serializable {
 	public void totalTime(Fare f3) throws Exception{
 		//find fastest overall route for this fare
 		Taxi t;
+		ArrayList<Taxi> checked = new ArrayList<Taxi>();
+		int availableTaxis = 0;
 		Long shortest = null , compare;
 		int index = 0;
 		//shortest = -1;
@@ -327,14 +382,31 @@ public class demoBean  implements Serializable {
 			System.out.print(i);
 			t = taxiList.getTaxi(i);
 			if(t.available(f3)){
-				compare = t.evaluateTotalLength(f3);
-				if(shortest == null){
-						shortest = compare;
-						index = i;
+				availableTaxis++;
+				int duplicate = (hasBeenChecked(t , checked));
+				if (duplicate == -1) {
+					checked.add(t);
+					
+					if(shortest == null){
+							compare = t.evaluateTotalLength(f3);
+							shortest = compare;
+							index = i;
+							benchmark = t.getTaxiDistance(f3.getPickupLatLng());
+					}
+					else if(isConsiderable(t , f3 , benchmark)){
+						System.out.println("\n" + t.getNumber() + " was considered");
+						compare = t.evaluateTotalLength(f3);
+						if (compare < shortest){				
+							shortest = compare;
+							index = i;
+					}
+						
+					}
 				}
-				else if (compare < shortest){
-					shortest = compare;
-					index = i;
+				else if(duplicate == index){
+					Taxi t2 = taxiList.getTaxi(duplicate);
+					if (t2.getPassengerNum() > t.getPassengerNum())
+						index = i;
 				}
 			}
 		}
@@ -343,12 +415,24 @@ public class demoBean  implements Serializable {
 			t.addFare(f3);
 			closestStatus = "The closest taxi is " + t.toString() + 
 							 ". Time for overall fare: " + shortest;
-		} else
+		}
+		else if(availableTaxis == 0)
+			closestStatus = "No taxis currently available, please try again later";
+		else
 			closestStatus = "taxi is here";
 		
 		
 	}
 	
+	public int hasBeenChecked(Taxi t , ArrayList<Taxi> checked){
+		for(int i = 0;i < checked.size();i++){
+			if(checked.get(i).getLocation().equals(t.getLocation()))
+				if(checked.get(i).getNumberOfFares() == 0 
+				&& t.getNumberOfFares() == 0)
+					return i;
+		}
+		return -1;
+	}
 
 
 	public void Update(int secondsMoved) throws Exception {
@@ -359,10 +443,72 @@ public class demoBean  implements Serializable {
 		Taxi t;
 		for (int i = 0; i < taxiList.getTaxiAmount(); i++) {
 			t = taxiList.getTaxi(i);
-			if (!(t.isEmpty())){
+			if (t.getIsActive()){
 				t.update(secondsMoved);
 			}
 		}
+		checkMultiples(secondsMoved);
+	}
+	
+	public void checkMultiples(int secondsMoved) throws Exception{
+		int i =0;
+		while(i < multipleList.size()){
+			Multiples m = multipleList.get(i);
+			//gets the amount of requests to request during this update;
+			int portion = m.getPortion(secondsMoved);
+			for (int j = 0; j < portion; j++){
+				share = m.getWillingToShare();
+				passNum = m.getNumberOfPassengers();
+				pickupPoint = m.getOrigin();
+				dropoffPoint = m.getDestination();
+				method = m.getMethod();
+				traffic = m.getTrafficModel();
+				Demo();
+			}
+			if(m.getAmount() == 0)
+				multipleList.remove(m);
+			else
+				i++;
+		}
+	}
+	
+	//checks if this taxi should be considered
+	public boolean isConsiderable(Taxi taxi, Fare fare , double benchmark){
+		Double distance;
+		if(taxi.isEmpty()){
+			distance = taxi.getTaxiDistance(fare.getPickupLatLng());
+			if(distance < (benchmark * 1.5))
+				return true;
+			else
+				return false;
+		}
+		else{
+			distance = taxi.getTaxiDistance(fare.getPickupLatLng());
+			if(distance < (benchmark * 1.5))
+				return true;
+			
+			distance = taxi.haversine(fare.getPickupLatLng().toString() , taxi.getDestLatLng());
+			distance += taxi.getTaxiDistance(fare.getPickupLatLng());
+			if(distance < (benchmark * 1.5))
+				return true;
+			
+			return false;
+			//return taxi.between(fare.getPickupLatLng());
+		}
+	}
+	
+	public void Multiply(){
+		//simulate multiple routes at once 
+		int numberOfRequests = Integer.parseInt(multiple);
+		int amountOfTime = Integer.parseInt(multipleTime);
+		
+		Multiples mult = new Multiples(numberOfRequests , amountOfTime,
+										share , pickupPoint , dropoffPoint,
+										passNum, traffic);
+		
+		multipleList.add(mult);
+		
+		
 	}
 	
 	public String Finish() throws Exception{

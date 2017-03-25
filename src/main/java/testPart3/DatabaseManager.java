@@ -180,6 +180,50 @@ public class DatabaseManager {
 		else
 			return null;
 	}
+	
+	public String getTaxiTimeDetails(String query, int SimID) throws SQLException{ 
+		con = ds.getConnection();
+		if(con != null){
+			PreparedStatement ps
+			= con.prepareStatement(
+			   "SELECT " + query + " FROM TaxiStats WHERE SimID = ?");
+			
+			ps.setInt(1, SimID);
+			
+			Time id = null;
+			ResultSet result =  ps.executeQuery();
+			while(result.next())
+				id = result.getTime(1);
+			con.close();
+			return id.toString();
+
+
+		}
+		else
+			return null;
+	}
+	
+	public String getTaxiFareDetails(String query, int SimID) throws SQLException{ 
+		con = ds.getConnection();
+		if(con != null){
+			PreparedStatement ps
+			= con.prepareStatement(
+			   "SELECT " + query + " FROM TaxiStats WHERE SimID = ?");
+			
+			ps.setInt(1, SimID);
+			
+			String id = null;
+			ResultSet result =  ps.executeQuery();
+			while(result.next())
+				id = "" + result.getInt(1);
+			con.close();
+			return id;
+
+
+		}
+		else
+			return null;
+	}
 
 	public ResultSet getRequests(int simID) throws SQLException {
 		
@@ -200,6 +244,29 @@ public class DatabaseManager {
 		System.out.println(simID + "= SimID Size = ");
 		System.out.print(result.getFetchSize());
 		return result;
+	}
+	
+	public String getSimTime(int simID) throws SQLException{
+		con = ds.getConnection();
+		if(con != null){
+			PreparedStatement ps
+			= con.prepareStatement(
+			   "SELECT Duration FROM Simulators WHERE SimID = ?");
+			
+			ps.setInt(1, simID);
+			
+			Time id = null;
+			ResultSet result =  ps.executeQuery();
+			while(result.next())
+				id = result.getTime(1);
+			con.close();
+			return id.toString();
+
+
+
+		}
+		else
+			return null;
 	}
 
 }

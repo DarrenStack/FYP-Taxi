@@ -17,6 +17,7 @@
     	<h:form>
     	These results are for Sim <h:outputLabel id="simNum" value="#{resultBean.simID}"/>
     	 <br></br>
+    	 The simulation Duration was <h:outputLabel value="#{resultBean.GetSimTime()}"/>
     	 <br></br>
     	 <br></br>
     	The longest fare was :
@@ -40,6 +41,24 @@
     	  <h:outputLabel value="#{resultBean.GetAverageTripTime()}"/> 
     	  <br></br>
     	  <br></br>
+    	  The longest time spent active by a taxi was :
+    	  <h:outputLabel value="#{resultBean.GetMaxTaxiTime()}"/>
+    	  <br></br>
+    	  The shortest time spent active by a taxi was :
+    	  <h:outputLabel value="#{resultBean.GetMinTaxiTime()}"/>
+    	  <br></br>
+    	  The most amount of fares picked up by a taxi was :
+    	  <h:outputLabel value="#{resultBean.GetMaxFares()}"/>
+    	  <br></br>
+    	   The least amount of fares picked up by a taxi was :
+    	  <h:outputLabel value="#{resultBean.GetMinFares()}"/>
+    	  <br></br>
+    	  The average time spent moving by a taxi was :
+    	  <h:outputLabel value="#{resultBean.GetAverageTaxiTime()}"/>	
+    	  <br></br>
+    	  The average amount of fares per taxi was :
+    	  <h:outputLabel value="#{resultBean.GetAverageFares()}"/> 
+    	  
     	  <br></br>
     	  <h:commandButton value="Redo Simulator" action="#{demoBean.Redo(resultBean.simID)}"></h:commandButton>
     	</h:form>

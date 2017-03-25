@@ -32,17 +32,20 @@ public class Taxi {
 	private int secondsWithoutMovement;
 	private GeoApiContext context;
 	private DirectionsApiRequest route, bestRoute;
-	private double percent;
+	private double percent , distanceBenchmark;
 
+	//AIzaSyAXXZYdq4tkUe1G5Ga8dFem13VrzuvMoeQ
+	//AIzaSyCpto6czmXSCmH6FzaiHsX1OmuTi96ZRLE
+	
 	private DirectionsResult routeResult , tempResult;
-	private boolean  empty , quickPick , isActive , validPickup;
+	private boolean  empty , quickPick , isActive , validPickup , after;
 	private int size , number , passengers , currentLeg, currentStep,
 				  travelTime , totalTime , legTime;
 	private String polyLine;
 
 	public Taxi(int size , int number, String newLocation , double percent) throws Exception{
 		context = new GeoApiContext();
-		context.setApiKey("AIzaSyCpto6czmXSCmH6FzaiHsX1OmuTi96ZRLE");
+		context.setApiKey("AIzaSyAXXZYdq4tkUe1G5Ga8dFem13VrzuvMoeQ");
 		empty = true;
 		this.size = size;
 		this.number = number;
@@ -51,11 +54,10 @@ public class Taxi {
 		travelTime = 0; 
 		legTime = 0;
 		this.percent = percent;
-		LatLng latLngLocation;
 		
-		GeocodingResult[] results = com.google.maps.GeocodingApi.geocode(context, newLocation).await();
-		latLngLocation = results[0].geometry.location;
-		location = latLngLocation.toString();
+		after = false;
+		
+		location = newLocation;
 		System.out.print(location);
 		secondsWithoutMovement = 0; currentStep = 0; currentLeg = 0;
 	}
@@ -164,6 +166,10 @@ public class Taxi {
 			request.mode(TravelMode.DRIVING);
 			
 			DistanceMatrix matrix= request.await();
+			if(after){
+				getAfterRoute(fare, matrix , routeOrigins);
+				return bestRoute;
+			}
 			Long shortestTime , time;
 			shortestTime = null;
 			int temp;
@@ -324,27 +330,9 @@ public class Taxi {
 			}
 			
 			if(shortestTime == null){
-				bestRoute = DirectionsApi.getDirections(context, location,
-						fare.getDestination());
-				tempLegs.clear();
-				
-				
-				
-				if(Fares.get(0).isPassedOrigin()){
-					updatedWay = new String[]{Fares.get(0).getDestination() ,fare.getOrigin()};
-					tempLegs.add(matrix.rows[routeOrigins.length-1].elements[3].durationInTraffic);
-					tempLegs.add(matrix.rows[3].elements[0].durationInTraffic);
-					tempLegs.add(matrix.rows[0].elements[1].durationInTraffic);
-				}
-				else{
-					updatedWay = new String[]{Fares.get(0).getOrigin(),
-							Fares.get(0).getDestination(),fare.getOrigin()};
-					tempLegs.add(matrix.rows[routeOrigins.length-1].elements[2].durationInTraffic);
-					tempLegs.add(matrix.rows[2].elements[3].durationInTraffic);
-					tempLegs.add(matrix.rows[3].elements[0].durationInTraffic);
-					tempLegs.add(matrix.rows[0].elements[1].durationInTraffic);
-				}
-				validPickup = false;
+				after = true;
+				getAfterRoute(fare, matrix , routeOrigins);
+				return bestRoute;
 			}
 			
 			
@@ -353,6 +341,31 @@ public class Taxi {
 			return bestRoute;
 		}
 		
+	}
+	
+	public void getAfterRoute(Fare fare, DistanceMatrix matrix ,String[] routeOrigins){
+		bestRoute = DirectionsApi.getDirections(context, location,
+				fare.getDestination());
+		tempLegs.clear();
+		String[] updatedWay;
+		
+		
+		if(Fares.get(0).isPassedOrigin()){
+			updatedWay = new String[]{Fares.get(0).getDestination() ,fare.getOrigin()};
+			tempLegs.add(matrix.rows[routeOrigins.length-1].elements[3].durationInTraffic);
+			tempLegs.add(matrix.rows[3].elements[0].durationInTraffic);
+			tempLegs.add(matrix.rows[0].elements[1].durationInTraffic);
+		}
+		else{
+			updatedWay = new String[]{Fares.get(0).getOrigin(),
+					Fares.get(0).getDestination(),fare.getOrigin()};
+			tempLegs.add(matrix.rows[routeOrigins.length-1].elements[2].durationInTraffic);
+			tempLegs.add(matrix.rows[2].elements[3].durationInTraffic);
+			tempLegs.add(matrix.rows[3].elements[0].durationInTraffic);
+			tempLegs.add(matrix.rows[0].elements[1].durationInTraffic);
+		}
+		
+		bestRoute.waypoints(updatedWay);
 	}
 	
 	public boolean withinBounds(int timeToFinishFare){
@@ -396,10 +409,8 @@ public class Taxi {
 		int distanceToEnd = 0;
 		legLengths = new ArrayList<Integer>();
 		DirectionsRoute r = routeResult.routes[0];
-		for (int i = currentLeg; i < r.legs.length; i++) {
-			distanceToEnd += (int)r.legs[i].duration.inSeconds;
-			legLengths.add(distanceToEnd);
-			distanceToEnd = 0;
+		for (int i = 0; i < tempLegs.size(); i++) {
+			legLengths.add((int) tempLegs.get(i).inSeconds);
 		}
 		
 		polyLine = routeResult.routes[0].overviewPolyline.getEncodedPath();
@@ -408,10 +419,102 @@ public class Taxi {
 		currentStep = 0;
 		currentLeg = 0;
 		legTime = 0;
+		after = false;
 		System.out.println("Waypoint number = " +routeResult.geocodedWaypoints.length);
 	
 	}
+	
+	
+	//used to calculate distance between two coordinates
+	public double haversine(String location1, String location2) {
+        
+		double R = 6372.8;
+		
+		String[] points = location1.split(",");
+		double lat1 = Double.parseDouble(points[0]);
+		double lon1 = Double.parseDouble(points[1]);
+		
+		points = location2.split(",");
+		double lat2 = Double.parseDouble(points[0]);
+		double lon2 = Double.parseDouble(points[1]);
+		  
+		double dLat = Math.toRadians(lat2 - lat1);
+        double dLon = Math.toRadians(lon2 - lon1);
+        lat1 = Math.toRadians(lat1);
+        lat2 = Math.toRadians(lat2);
+ 
+        double a = Math.pow(Math.sin(dLat / 2),2) + Math.pow(Math.sin(dLon / 2),2) * Math.cos(lat1) * Math.cos(lat2);
+        double c = 2 * Math.asin(Math.sqrt(a));
+        return R * c;
+    }
+	
+	
+	//distance between taxi and Fare
+	public double getTaxiDistance(LatLng pickupLatLng){
+		//fare
+		double distance = -1;
+		if(after){
+			String dest = getDestLatLng();
+			distance = haversine(location , dest);
+			distance += haversine(dest , pickupLatLng.toString());
+		}
+		else{
+			distance = haversine(location , pickupLatLng.toString());
+		}
+		distanceBenchmark = distance;
+		return distance;
+	}
+	
+	//gets lat lng of taxi destination
+	public String getDestLatLng(){
+		DirectionsLeg leg= routeResult.routes[0].legs[routeResult.routes[0].legs.length - 1];
+		LatLng farePoint = leg.endLocation;
+		return farePoint.toString();
+		
+	}
 
+	//closest point at the time of check so its the benchmark for others
+	//to compare
+	public double getBenchmark(){
+		return distanceBenchmark;
+	}
+	
+	public boolean between(LatLng pickupLatLng){
+		//sees if pickup location between where taxi already going
+		String[] destPoints = getDestLatLng().split(",");
+		String[] locationPoints = location.split(",");
+		double locLat = Double.parseDouble(locationPoints[0]);
+		double destLat = Double.parseDouble(destPoints[0]);
+		double maxLat , minLat , maxLng, minLng;
+		//between latitudes
+		if(destLat > locLat){
+			maxLat = destLat;
+			minLat = locLat;
+		}
+		else{
+			maxLat = locLat;
+			minLat = destLat;
+		}
+		if(pickupLatLng.lat < maxLat && pickupLatLng.lat > minLat)
+			return true;
+		
+		//between longitudes
+		double locLng = Double.parseDouble(locationPoints[1]);
+		double destLng = Double.parseDouble(destPoints[1]);
+		if(destLng > locLng){
+			maxLng = destLng;
+			minLng = locLng;
+		}
+		else{
+			maxLng = locLng;
+			minLng = destLng;
+		}
+		
+		if(pickupLatLng.lng < maxLng && pickupLatLng.lng > minLng)
+			return true;
+		
+		return false;
+	}
 	
 	public void removeFare(Fare fare ){
 		Fares.remove(fare);
@@ -419,8 +522,6 @@ public class Taxi {
 		passengers -= fare.getNumberOfPassengers();
 		if(passengers == 0)
 			empty = true;
-		if(Fares.size() == 0)
-			isActive = false;
 	}
 	
 	public boolean isEmpty(){
@@ -428,12 +529,21 @@ public class Taxi {
 	}
 	
 	public boolean available(Fare fare){
-		if(size - passengers < fare.getNumberOfPassengers())
+		if(Fares.size() >= 2){
 			return false;
-		else if (!empty && !fare.isWillingToShare())
-			return false;
-		else
+		}
+		else if(size - passengers < fare.getNumberOfPassengers()){
+			after = true;
 			return true;
+		}
+		else if (!empty && !fare.isWillingToShare()){
+			after = true;
+			return true;
+		}
+		else{
+			after = false;
+			return true;
+		}
 	}
 	
 	public void update(int secondsMoved) throws Exception {
@@ -441,29 +551,37 @@ public class Taxi {
 		//moving it 2.5 minutes along as 180 seconds = 2.5 minutes
 		DirectionsRoute r = routeResult.routes[0];
 		DirectionsLeg l;
+		boolean foundPoint = false;
 		if(isActive){
-			secondsWithoutMovement += secondsMoved;
-			travelTime += secondsMoved;
-			legTime += secondsMoved;
+			if(Fares.size() == 0){
+				isActive = false;
+				foundPoint = true;
+			} else {
+				secondsWithoutMovement += secondsMoved;
+				travelTime += secondsMoved;
+				legTime += secondsMoved;
+			}
 		}
 		
 		int  stepMovement = 0;
-		boolean foundPoint = false;
+		
+		System.out.println("At leg " + currentLeg + " of " + r.legs.length +
+				"At step " + currentStep + " of " + r.legs[currentLeg].steps.length);
 
 		for (int i = currentLeg; i < r.legs.length && !foundPoint; i++) {
 				l = r.legs[i];
 				for (int j = currentStep; j < l.steps.length; j++) {
-					if(legTime > tempLegs.get(i).inSeconds){
+					if(legTime > legLengths.get(i)){
 						
 						//as long as it isn't the last leg
-						while(i < r.legs.length && legTime > tempLegs.get(i).inSeconds ){
-							System.out.println(i + ": " + legTime + " Leg Time: " + tempLegs.get(i).inSeconds);
+						while(i < r.legs.length - 1 && legTime > legLengths.get(i) ){
+							System.out.println(i + ": " + legTime + " Leg Time: " + legLengths.get(i));
 							passengerUpdate(r.legs[i].endAddress);
-							currentLeg = i;
+							currentLeg = i + 1;
 							currentStep = 0;
 							foundPoint = true;
-							secondsWithoutMovement = (int) (legTime - tempLegs.get(i).inSeconds);
-							legTime = (int) (legTime - tempLegs.get(i).inSeconds);
+							secondsWithoutMovement = (int) (legTime - legLengths.get(i));
+							legTime = (int) (legTime - legLengths.get(i));
 							//check if  remaining legTime smaller than next 
 							//leg. If not keep checking
 							i++;
@@ -512,8 +630,7 @@ public class Taxi {
 						
 				}
 		}
-		System.out.println("At leg " + currentLeg + " of " + r.legs.length +
-				"At step " + currentStep + " of " + r.legs[currentLeg].steps.length);
+		
 		if (!foundPoint){
 			
 			location = r.legs[(r.legs.length - 1)].endLocation.toString();
@@ -528,7 +645,6 @@ public class Taxi {
 	
 	public void passengerUpdate(String point) throws Exception{
 		System.out.println("CHECKING PASSENGERS");
-		boolean foundPickup = false , foundDest = false;
 		DirectionsRoute r = routeResult.routes[0];
 		long lastStop = 0;
 		int  correctTime , offset;
@@ -555,14 +671,14 @@ public class Taxi {
 		secondsWithoutMovement = 0;
 	}
 	
-	public Duration evaluateFare(Fare fare) throws Exception {  
+	public long evaluateFare(Fare fare) throws Exception {  
 		//quickPick is used so taxi knows if they're looking for best
 		//overall route or quickest pickup to avoid duplicate code
 		quickPick = true;
 		
 		String[] destinations;
 		String[] origins;
-		Duration shortest;
+		long shortest;
 		long time = 0;
 		
 			// if no current fare, just checks from location
@@ -573,7 +689,7 @@ public class Taxi {
 			  destinations[0] = fare.getOrigin();
 			  
 			  DistanceMatrix matrix=DistanceMatrixApi.getDistanceMatrix(context, origins, destinations).await();
-			  shortest = matrix.rows[0].elements[0].duration;
+			  shortest = matrix.rows[0].elements[0].duration.inSeconds;
 			  System.out.println("Taxi Num: " + number + "  Time: " + shortest);
 			  return shortest;
 		  }
@@ -591,9 +707,9 @@ public class Taxi {
 					else 
 						found = true;
 				}
-			  shortest = new Duration();
-			  shortest.inSeconds = time;
-			  System.out.println(shortest.humanReadable);
+			  
+			  shortest = time;
+			  System.out.println(shortest);
 		  //passenger gets taxi thats closest to them and doesn't intrude on current fares
 		  //Note: Not the shortest overall trip
 		  System.out.println("Taxi Num: " + number + "  Time: " + shortest);
@@ -628,7 +744,7 @@ public class Taxi {
 			DirectionsRoute r = routeResult.routes[0];
 			for (int i = currentLeg; i < r.legs.length; i++) {
 				l = r.legs[i];
-				distanceToEnd += (int)tempLegs.get(i).inSeconds - legTime;
+				distanceToEnd = (int)legLengths.get(i) - legTime;
 				//sets it up so there should be no offset so time is accurate
 				travelTime += distanceToEnd;
 				secondsWithoutMovement += distanceToEnd;
@@ -643,9 +759,11 @@ public class Taxi {
 			isActive = false;
 			update(0);
 		}
+		System.out.println("DTE" + distanceToEnd);
 		return (int)distanceToEnd;
 		
 	}
+	
 	
 	public String toString(){
 		String result = "Taxi number " + number + ". It has " + passengers + " passengers";
@@ -660,6 +778,10 @@ public class Taxi {
 	
 	public ArrayList<FareStats> getFareStats(){
 		return FareAnalytics;
+	}
+	
+	public int getNumberOfFares(){
+		return Fares.size();
 	}
 	
 	public int getTravelTime(){
@@ -685,4 +807,17 @@ public class Taxi {
 	public void setPolyLine(String polyLine) {
 		this.polyLine = polyLine;
 	}
+
+	public boolean getIsActive() {
+		return isActive;
+	}
+
+	public void setActive(boolean isActive) {
+		this.isActive = isActive;
+	}
+	
+	public int getPassengerNum(){
+		return passengers;
+	}
+	
 }

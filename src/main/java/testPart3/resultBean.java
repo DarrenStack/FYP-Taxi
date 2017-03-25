@@ -27,6 +27,41 @@ public class resultBean  implements Serializable{
 	}
 	
 	
+	public String GetMaxTaxiTime() throws SQLException {
+		System.out.println(simID);
+		return db.getTaxiTimeDetails("MAX(TimeMoving)" , sim);
+	}
+
+
+
+	public String GetMinTaxiTime() throws SQLException {
+		return db.getTaxiTimeDetails("MIN(TimeMoving)" , sim);
+	}
+
+
+
+	public String GetMaxFares() throws SQLException {
+		return db.getTaxiFareDetails("MAX(Fares)" , sim);
+	}
+
+
+
+	public String GetMinFares() throws SQLException {
+		return db.getTaxiFareDetails("MIN(Fares)" , sim);
+	}
+
+
+
+	public String GetAverageTaxiTime() throws SQLException {
+		return db.getTaxiTimeDetails("SEC_TO_TIME(AVG(TIME_TO_SEC(TimeMoving)))" , sim);
+	}
+
+
+
+	public String GetAverageFares() throws SQLException {
+		return db.getTaxiFareDetails("AVG(Fares)" , sim);
+	}
+	
 	public String GetMaxFareTime() throws SQLException {
 		System.out.println(simID);
 		return db.getFareDetails("MAX(TimeTaken)" , sim);
@@ -68,6 +103,10 @@ public class resultBean  implements Serializable{
 
 	public void setSimID(String simID) {
 		this.simID = simID;
+	}
+	
+	public String GetSimTime() throws SQLException{
+		return db.getSimTime(sim);
 	}
 
 	

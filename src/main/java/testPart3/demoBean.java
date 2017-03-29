@@ -1,22 +1,22 @@
 package testPart3;
 
+import java.io.Serializable;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
 import javax.faces.bean.ManagedBean;
 import javax.faces.bean.SessionScoped;
 
 import org.joda.time.DateTime;
 
 import com.google.maps.GeoApiContext;
-import com.google.maps.model.Duration;
 import com.google.maps.model.GeocodingResult;
 import com.google.maps.model.LatLng;
-
-import java.io.Serializable;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Time;
-import java.time.LocalTime;
-import java.util.ArrayList;
-import java.util.List;
 
 @ManagedBean
 @SessionScoped
@@ -28,18 +28,19 @@ public class demoBean  implements Serializable {
 	
 	private String pickupPoint , dropoffPoint , share, 
 	passNum , taxis , startTaxi, closestStatus 
-	, polyline , method , percentage , startTime ,
-	time , traffic , multiple , multipleTime;
+	, polyline , method , percentage , startTime , dayOfWeek ,
+	time , traffic , multiple , multipleTime , randomPass , errorMessage;
 	private TaxiRank taxiList;
 	private TaxiStats taxiStatistics;
-	private ArrayList<String> startList = new ArrayList<String>();
+	private ArrayList<LatLng> startList = new ArrayList<LatLng>();
 	private ArrayList<String> requestDetails;
 	private ArrayList<Multiples> multipleList;
+	private GeoApiContext context = new GeoApiContext();
 	private int totalTime;
 	private double benchmark;
 	private boolean redo = false;
 	private ResultSet requests;
-	private LocalTime timeOfSim;
+	private DateTime timeOfSim;
 	
 	private DatabaseManager db;
 	
@@ -98,12 +99,26 @@ public class demoBean  implements Serializable {
 	}
 
 
+	public String getDayOfWeek() {
+		return dayOfWeek;
+	}
+
+
+
+	public void setDayOfWeek(String dayOfWeek) {
+		this.dayOfWeek = dayOfWeek;
+	}
+
+
+
 	public void setStartTime(String startTime) {
 		this.startTime = startTime;
 	}
 	
+	
+	
 	public String getTime() {
-		time = timeOfSim.toString();
+		time = timeOfSim.toLocalTime().toString();
 		return time;
 	}
 
@@ -222,9 +237,47 @@ public class demoBean  implements Serializable {
 	}
 
 	
+	
+	public String getErrorMessage() {
+		if(errorMessage == null)
+			errorMessage = "";
+		return errorMessage;
+	}
+
+
+
+	public void setErrorMessage(String errorMessage) {
+		this.errorMessage = errorMessage;
+	}
+
+	
+
+	public String getRandomPass() {
+		return randomPass;
+	}
+
+
+
+	public void setRandomPass(String randomPass) {
+		this.randomPass = randomPass;
+	}
+
+
+
 	public void addStartLocation(){
+		context.setApiKey("AIzaSyCpto6czmXSCmH6FzaiHsX1OmuTi96ZRLE"); 
+		GeocodingResult[] results;
+		try {
+			results = com.google.maps.GeocodingApi.geocode(context, startTaxi).await();
+			LatLng latLngLocation = results[0].geometry.location;
+			startList.add(latLngLocation);
+			errorMessage = "";
+		} catch (Exception e) {
+			
+			errorMessage = "Not a valid Location";
+		}
 		
-		startList.add(startTaxi);
+		
 	}
 	
 	public List<Taxi> getTaxiList(){
@@ -238,28 +291,42 @@ public class demoBean  implements Serializable {
 		requestDetails = new ArrayList<String>();
 		multipleList = new ArrayList<Multiples>();
 		
-		timeOfSim = LocalTime.parse(startTime);
+		//sets time of sim to time specified in customization
+		LocalTime timeOfDay = LocalTime.parse(startTime);
+		int day = Integer.parseInt(dayOfWeek);
+		LocalDate date = LocalDate.now();
+		//cannot be the before current time
+		date = date.plusDays(1);
+		while(date.getDayOfWeek().getValue() != day){
+			date = date.plusDays(1);
+		}
+		
+		timeOfSim = new DateTime(date.getYear(),date.getMonthValue(),
+										date.getDayOfMonth(),timeOfDay.getHour(),
+										timeOfDay.getMinute(), timeOfDay.getSecond());
 		
 		//sets up the taxis
 		taxiList = new TaxiRank(Integer.parseInt(taxis) , startList , percentage);
 		closestStatus = "";
 		// setting up taxis that already have fares
+		/*
 		String origins = "Raheen, Limerick, Ireland" ;
 		String destinations =  "Castletroy, Limerick, Ireland" ;
 		String traffic = "BEST_GUESS";
-		Fare f1 = new Fare(false, origins, destinations, 2 ,traffic , timeOfSim);
+		Fare f1 = new Fare(true, origins, destinations, 2 ,traffic , timeOfSim);
 		Taxi t1 = taxiList.getTaxi(0);
 		t1.addFare(f1);
 		origins =  "Monaleen, Limerick, Ireland" ;
 		destinations =  "Parteen, Limerick, Ireland" ;
-		Fare f2 = new Fare(false, origins, destinations, 3 , traffic , timeOfSim);
+		Fare f2 = new Fare(true, origins, destinations, 3 , traffic , timeOfSim);
 		Taxi t2 = taxiList.getTaxi(1);
 		t2.addFare(f2);
+		
 		System.out.println(t1.toString());
 		System.out.println(t2.toString());
 		
 		polyline = t1.getPolyLine();
-
+		*/
 		//returns name of page to move to
 		if(redo)
 			return simAll();
@@ -286,11 +353,11 @@ public class demoBean  implements Serializable {
 			
 			if(Boolean.parseBoolean(method)){
 				quickestPickup(f3);
-				insertionString += "--0";
+				insertionString += "--1";
 			}
 			else{
 				totalTime(f3);
-				insertionString += "--1";
+				insertionString += "--0";
 			}
 			//converts boolean to int
 			int val = sharing? 1 : 0;
@@ -304,7 +371,7 @@ public class demoBean  implements Serializable {
 	
 	public String simAll() throws Exception{
 		while(requests.next()){
-			//goes through all requests for sim wantd to be replicated
+			//goes through all requests for sim wanted to be replicated
 			//and requests them at the same times with these new conditions
 			Update(requests.getInt(3) - totalTime);
 			share = "" + requests.getByte(8);
@@ -385,6 +452,7 @@ public class demoBean  implements Serializable {
 				availableTaxis++;
 				int duplicate = (hasBeenChecked(t , checked));
 				if (duplicate == -1) {
+					//so future taxis do not check it
 					checked.add(t);
 					
 					if(shortest == null){
@@ -458,7 +526,10 @@ public class demoBean  implements Serializable {
 			int portion = m.getPortion(secondsMoved);
 			for (int j = 0; j < portion; j++){
 				share = m.getWillingToShare();
-				passNum = m.getNumberOfPassengers();
+				if(Boolean.parseBoolean(m.getRandomPass()))
+					passNum = "" +((int) (Math.random()*4) + 1);
+				else
+					passNum = m.getNumberOfPassengers();
 				pickupPoint = m.getOrigin();
 				dropoffPoint = m.getDestination();
 				method = m.getMethod();
@@ -504,9 +575,11 @@ public class demoBean  implements Serializable {
 		
 		Multiples mult = new Multiples(numberOfRequests , amountOfTime,
 										share , pickupPoint , dropoffPoint,
-										passNum, traffic);
+										passNum , randomPass, traffic);
 		
 		multipleList.add(mult);
+		
+		closestStatus = "";
 		
 		
 	}
@@ -515,16 +588,32 @@ public class demoBean  implements Serializable {
 		Taxi t;
 		int longestTimeLeft = 0;
 		int timeLeft;
+		//make sure all promised requests are made
+		ArrayList<Integer> ratesOfrequest = new ArrayList<Integer>();
+		while(multipleList.size() > 0){
+			for(int i = 0;i < multipleList.size();i++){
+				ratesOfrequest.add(multipleList.get(i).getRate());
+			}
+			//sorted list of rates
+			Collections.sort(ratesOfrequest);
+			//updates for each rate so all are called once
+			Update(ratesOfrequest.get(0));
+			for(int j = 1; j < ratesOfrequest.size();j++){
+				Update(ratesOfrequest.get(j) - ratesOfrequest.get(j-1));
+			}
+		}
 		for (int i = 0; i < taxiList.getTaxiAmount(); i++) {
 			t = taxiList.getTaxi(i);
 			timeLeft = t.finishUp();
 			if(timeLeft > longestTimeLeft)
 				longestTimeLeft = timeLeft;
 			}
+		System.out.println("tOTAL tIME WAS :" + totalTime);
 		//if finished early, this tells you how long the simulation went on for
 		totalTime += longestTimeLeft;
+		System.out.println("tOTAL tIME IS :" + totalTime);
 		
-		taxiStatistics = new TaxiStats(taxiList , totalTime , requestDetails);
+		taxiStatistics = new TaxiStats(taxiList , totalTime , requestDetails , startTime , dayOfWeek);
 		int SimID = taxiStatistics.getSimID();
 		
 		return "results.xhtml?simID" + SimID;
@@ -535,6 +624,11 @@ public class demoBean  implements Serializable {
 		db = new DatabaseManager();
 		requests = db.getRequests(simID);
 		redo = true;
+		return "setupSim";
+	}
+	
+	public String Redo() throws SQLException{
+		redo = false;
 		return "setupSim";
 	}
 	

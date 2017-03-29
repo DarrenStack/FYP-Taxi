@@ -6,6 +6,9 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Time;
 import java.sql.Timestamp;
+import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.naming.Context;
 import javax.naming.InitialContext;
@@ -28,19 +31,25 @@ public class DatabaseManager {
 		
 	}
 	
-	public void addSimulator(int totalTime) throws SQLException{
+	public void addSimulator(int totalTime, String timeOfDay, String dayOfWeek) throws SQLException{
 		con = ds.getConnection();
 		String sqlTime = (totalTime/3600) + ":" + ((totalTime/60)%60) + ":" + (totalTime%60);
+		int hours = Integer.parseInt(timeOfDay.substring(0,2));
+		int minutes = Integer.parseInt(timeOfDay.substring(3,5));
+		LocalTime dayTime = LocalTime.of(hours, minutes);
 		System.out.println(sqlTime);
 		Time durationOfSim = java.sql.Time.valueOf(sqlTime);
 		Timestamp timestamp = new Timestamp(System.currentTimeMillis());
 		if(con != null){
 			PreparedStatement ps
 			= con.prepareStatement(
-			   "INSERT INTO Simulators (Timestamp , Duration) VALUES (? , ?)");
+			   "INSERT INTO Simulators (Timestamp , Duration , DayOfWeek , TimeOfDay)"
+			   + " VALUES (? , ? , ? , ?)");
 
 			ps.setTimestamp(1, timestamp);
 			ps.setTime(2, durationOfSim);
+			ps.setInt(3, Integer.parseInt(dayOfWeek));
+			ps.setTime(4, java.sql.Time.valueOf(dayTime));
 			
 			ps.executeUpdate();
 
@@ -181,6 +190,28 @@ public class DatabaseManager {
 			return null;
 	}
 	
+	public String getFareIntDetails(String query, int SimID) throws SQLException{ 
+		con = ds.getConnection();
+		if(con != null){
+			PreparedStatement ps
+			= con.prepareStatement(
+			   "SELECT " + query + " FROM FareStats WHERE SimID = ?");
+			
+			ps.setInt(1, SimID);
+			
+			int id = -1;
+			ResultSet result =  ps.executeQuery();
+			while(result.next())
+				id = result.getInt(1);
+			con.close();
+			return id + "";
+
+
+		}
+		else
+			return null;
+	}
+	
 	public String getTaxiTimeDetails(String query, int SimID) throws SQLException{ 
 		con = ds.getConnection();
 		if(con != null){
@@ -215,7 +246,7 @@ public class DatabaseManager {
 			String id = null;
 			ResultSet result =  ps.executeQuery();
 			while(result.next())
-				id = "" + result.getInt(1);
+				id = "" + result.getDouble(1);
 			con.close();
 			return id;
 
@@ -246,12 +277,12 @@ public class DatabaseManager {
 		return result;
 	}
 	
-	public String getSimTime(int simID) throws SQLException{
+	public String getSimTime(String query ,int simID) throws SQLException{
 		con = ds.getConnection();
 		if(con != null){
 			PreparedStatement ps
 			= con.prepareStatement(
-			   "SELECT Duration FROM Simulators WHERE SimID = ?");
+			   "SELECT " + query + " FROM Simulators WHERE SimID = ?");
 			
 			ps.setInt(1, simID);
 			
@@ -262,7 +293,54 @@ public class DatabaseManager {
 			con.close();
 			return id.toString();
 
-
+		}
+		else
+			return null;
+	}
+	
+	public String getSimDay(int simID) throws SQLException{
+		con = ds.getConnection();
+		if(con != null){
+			PreparedStatement ps
+			= con.prepareStatement(
+			   "SELECT DayOfWeek FROM Simulators WHERE SimID = ?");
+			
+			ps.setInt(1, simID);
+			
+			int id = 0;
+			ResultSet result =  ps.executeQuery();
+			while(result.next())
+				id = result.getInt(1);
+			con.close();
+			
+			switch(id){
+			case 1: return "Monday"; 
+			case 2: return "Tuesday"; 
+			case 3: return "Wednesday";
+			case 4: return "Thursday"; 
+			case 5: return "Friday"; 
+			case 6: return "Saturday";
+			case 7: return "Sunday"; 
+			default: return null;
+			}
+		}
+		else
+			return null;
+	}
+	
+	public List<String> getSimList() throws SQLException{
+		con = ds.getConnection();
+		if(con != null){
+			PreparedStatement ps
+			= con.prepareStatement(
+			   "SELECT SimID FROM Simulators");
+			
+			ArrayList<String> numbers = new ArrayList<String>();
+			ResultSet result =  ps.executeQuery();
+			while(result.next())
+				numbers.add(result.getString(1));
+			con.close();
+			return numbers;
 
 		}
 		else

@@ -2,6 +2,8 @@ package testPart3;
 
 import java.time.LocalTime;
 
+import org.joda.time.DateTime;
+
 import com.google.maps.GeoApiContext;
 import com.google.maps.model.GeocodingResult;
 import com.google.maps.model.LatLng;
@@ -13,12 +15,12 @@ public class Fare {
 	private String destination;
 	private int numberOfPassengers;
 	private String trafficModel;
-	private LocalTime time;
+	private DateTime time;
 	private FareStats fareStat;
 	private GeocodingResult[] resultPickup , resultDropoff;
 	
 	public Fare(boolean willingToShare , String origin, String destination, 
-					int num , String trafficModel , LocalTime time) throws Exception{
+					int num , String trafficModel , DateTime time) throws Exception{
 		GeoApiContext context = new GeoApiContext();
 		context.setApiKey("AIzaSyCpto6czmXSCmH6FzaiHsX1OmuTi96ZRLE");
 		this.willingToShare = willingToShare;
@@ -36,7 +38,7 @@ public class Fare {
 		return trafficModel;
 	}
 
-	public LocalTime getTime() {
+	public DateTime getTime() {
 		return time;
 	}
 

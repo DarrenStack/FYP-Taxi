@@ -1,0 +1,87 @@
+div.oneRequest {
+	display: inline-block;
+	width:190px;
+    
+}
+div.multRequest {
+	display: inline-block;
+	
+	width:300px; 
+}
+
+div.details {
+    width:550px;
+    margin: auto;
+    display: inline-block;
+    
+}
+
+div.results {
+    margin: auto;
+    
+}
+div.simButtons {
+       
+}
+
+div.customise {
+    width:800px;
+    height: 100px;
+     
+    margin: auto;
+    
+    position: absolute;
+    top:0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    
+}
+
+
+div.div2 {
+	display: inline-block;
+	
+}
+div.mapClass {
+	display: inline-block;
+	border-style: solid;
+	border-width: 2px;
+    width: 600px; 
+    height: 450px;
+}
+
+.table{
+	border-collapse:collapse; 
+
+}
+
+.headers{
+	text-align:center;
+	background:none scroll 0 0 #E5E5E5;
+	border-bottom:1px solid #000000;
+	padding:20px;
+}
+.rows{
+	text-align:center;
+	background:none repeat scroll 0 0 #FFFFFF;
+	border-top:1px solid #000000;
+}
+.columns{
+	border-right-style:1px solid #000000;
+	
+}
+
+p {
+    font-size:15px;
+    font-family: "Trebuchet MS", Helvetica, sans-serif;
+    
+}
+
+h1 {
+    font-size:40px;
+    text-align: center;
+    font-family: "Palatino Linotype", "Book Antiqua", Palatino, serif;
+    border-bottom: 1px solid black;
+    
+}

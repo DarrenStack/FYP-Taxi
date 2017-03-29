@@ -8,59 +8,166 @@
     <h:head>
         <title>Results</title>
     </h:head>
+    <h:outputStylesheet  name="style.css"></h:outputStylesheet>
     <h:body>
-    	<h2>Results</h2>
+    	<h1>Results</h1>
     	<f:metadata>
     		<f:viewParam name="simID" value="#{resultBean.simID}"  />
     		<f:event type="preRenderView" listener="#{resultBean.Initiate()}" />
 		</f:metadata>
+		
     	<h:form>
-    	These results are for Sim <h:outputLabel id="simNum" value="#{resultBean.simID}"/>
+    	<div class="results">
+    	<p>These results are for Sim number <h:outputLabel id="simNum" value="#{resultBean.simID}"/>
+    	 </p>
+    	 <p>The simulation Duration was <h:outputLabel value="#{resultBean.GetSimTime()}"/>
+    	 </p>
+    	  <p>The simulation was set on <h:outputLabel value="#{resultBean.GetSimDayOfWeek()}"/>
+    	   at <h:outputLabel value="#{resultBean.GetSimTimeOfDay()}"/>
+    	 	</p>
     	 <br></br>
-    	 The simulation Duration was <h:outputLabel value="#{resultBean.GetSimTime()}"/>
-    	 <br></br>
-    	 <br></br>
-    	The longest fare was :
-    	  <h:outputLabel value="#{resultBean.GetMaxFareTime()}"/>
-    	  <br></br>
-    	  The shortest fare was :
-    	  <h:outputLabel value="#{resultBean.GetMinFareTime()}"/>
-    	  <br></br>
-    	  The longest time waited for a fare was :
-    	  <h:outputLabel value="#{resultBean.GetMaxWaitTime()}"/>
-    	  <br></br>
-    	   The shortest time waited for a fare was :
-    	  <h:outputLabel value="#{resultBean.GetMinWaitTime()}"/>
-    	  <br></br>
-    	  <br></br>
-    	  <br></br>
-    	  The average time waited for a fare was :
-    	  <h:outputLabel value="#{resultBean.GetAverageWaitTime()}"/>	
-    	  <br></br>
-    	  The average time taken for a fare was :
-    	  <h:outputLabel value="#{resultBean.GetAverageTripTime()}"/> 
-    	  <br></br>
-    	  <br></br>
-    	  The longest time spent active by a taxi was :
-    	  <h:outputLabel value="#{resultBean.GetMaxTaxiTime()}"/>
-    	  <br></br>
-    	  The shortest time spent active by a taxi was :
-    	  <h:outputLabel value="#{resultBean.GetMinTaxiTime()}"/>
-    	  <br></br>
-    	  The most amount of fares picked up by a taxi was :
-    	  <h:outputLabel value="#{resultBean.GetMaxFares()}"/>
-    	  <br></br>
-    	   The least amount of fares picked up by a taxi was :
-    	  <h:outputLabel value="#{resultBean.GetMinFares()}"/>
-    	  <br></br>
-    	  The average time spent moving by a taxi was :
-    	  <h:outputLabel value="#{resultBean.GetAverageTaxiTime()}"/>	
-    	  <br></br>
-    	  The average amount of fares per taxi was :
-    	  <h:outputLabel value="#{resultBean.GetAverageFares()}"/> 
-    	  
-    	  <br></br>
-    	  <h:commandButton value="Redo Simulator" action="#{demoBean.Redo(resultBean.simID)}"></h:commandButton>
+			<h:dataTable id="resultStats" value="#{resultBean.getMainResult()}"
+				var="r"
+				styleClass="table"
+    			headerClass="headers"
+    			rowClasses="rows">
+				<h:column>
+					<f:facet name="header">Longest Fare</f:facet>
+                    #{r.maxFareTime}
+                </h:column>
+				<h:column>
+					<f:facet name="header">Shortest Fare</f:facet>
+                    #{r.minFareTime}
+                </h:column>
+				<h:column>
+					<f:facet name="header">Longest Time Waited</f:facet>
+                    #{r.maxWaitTime}
+                </h:column>
+                <h:column>
+				<f:facet name="header">Shortest Time Waited</f:facet>
+                    #{r.minWaitTime}
+                </h:column>
+                <h:column>
+				<f:facet name="header">Average Time Waited</f:facet>
+                    #{r.avgWaitTime}
+                </h:column><h:column>
+				<f:facet name="header">Average Time Taken</f:facet>
+                    #{r.avgTripTime}
+                </h:column><h:column>
+					<f:facet name="header">Most Time Moving by Taxi</f:facet>
+                    #{r.maxTaxiTime}
+                </h:column>
+				<h:column>
+					<f:facet name="header">Least Time Moving by Taxi</f:facet>
+                     #{r.minTaxiTime}
+                </h:column><h:column>
+					<f:facet name="header">Average Time Moving by Taxi</f:facet>
+                     #{r.avgTaxiTime}
+                </h:column><h:column>
+					<f:facet name="header">Amount of Taxis</f:facet>
+                     #{r.numberOfTaxis}
+                </h:column><h:column>
+					<f:facet name="header">Amount of Fares</f:facet>
+                     #{r.numberOfFares}
+                </h:column><h:column>
+				<f:facet name="header">Max Fares for Taxi</f:facet>
+                    #{r.maxFares}
+                </h:column><h:column>
+				<f:facet name="header">Min Fares for Taxi</f:facet>
+                    #{r.minFares}
+                </h:column><h:column>
+				<f:facet name="header">Average Fares by Taxi</f:facet>
+                    #{r.avgFares}
+                </h:column>
+			</h:dataTable>
+			<h:commandButton value="Redo Simulator" action="#{demoBean.Redo(resultBean.simID)}">
+			<f:actionListener binding="#{resultBean.finished()}"/>
+			</h:commandButton>
+			
+			<h:commandButton value="New Simulator" action="#{demoBean.Redo()}">
+			<f:actionListener binding="#{resultBean.finished()}"/>
+			</h:commandButton>
+    	</div>
     	</h:form>
+    	<h:form id="thisForm">
+    	<div class="results">
+    	
+    	 <br></br>
+    	 <p>These results are for Sim number <h:outputLabel id="simNum" value="#{resultBean.GetCompSimID()}"/>
+    	 </p>
+    	 <p>The simulation Duration was <h:outputLabel value="#{resultBean.GetCompSimTime()}"/>
+    	 </p>
+    	  <p>The simulation was set on <h:outputLabel value="#{resultBean.GetCompSimDayOfWeek()}"/>
+    	   at <h:outputLabel value="#{resultBean.GetCompSimTimeOfDay()}"/>
+    	   </p>
+    	 
+			<h:dataTable  id="resultCompareStats" value="#{resultBean.GetCompareResult()}"
+				var="r"
+				styleClass="table"
+    			headerClass="headers"
+    			rowClasses="rows">
+				<h:column>
+					<f:facet name="header">Longest Fare</f:facet>
+                    #{r.maxFareTime}
+                </h:column>
+				<h:column>
+					<f:facet name="header">Shortest Fare</f:facet>
+                    #{r.minFareTime}
+                </h:column>
+				<h:column>
+					<f:facet name="header">Longest Time Waited</f:facet>
+                    #{r.maxWaitTime}
+                </h:column>
+                <h:column>
+				<f:facet name="header">Shortest Time Waited</f:facet>
+                    #{r.minWaitTime}
+                </h:column>
+                <h:column>
+				<f:facet name="header">Average Time Waited</f:facet>
+                    #{r.avgWaitTime}
+                </h:column><h:column>
+				<f:facet name="header">Average Fare</f:facet>
+                    #{r.avgTripTime}
+                </h:column><h:column>
+					<f:facet name="header">Most Time Moving by Taxi</f:facet>
+                    #{r.maxTaxiTime}
+                </h:column>
+				<h:column>
+					<f:facet name="header">Least Time Moving by Taxi</f:facet>
+                     #{r.minTaxiTime}
+                </h:column><h:column>
+					<f:facet name="header">Average Time Moving by Taxi</f:facet>
+                     #{r.avgTaxiTime}
+                </h:column><h:column>
+					<f:facet name="header">Amount of Taxis</f:facet>
+                     #{r.numberOfTaxis}
+                </h:column><h:column>
+					<f:facet name="header">Amount of Fares</f:facet>
+                     #{r.numberOfFares}
+                </h:column><h:column>
+				<f:facet name="header">Max Fares for Taxi</f:facet>
+                    #{r.maxFares}
+                </h:column><h:column>
+				<f:facet name="header">Min Fares for Taxi</f:facet>
+                    #{r.minFares}
+                </h:column><h:column>
+				<f:facet name="header">Average Fares</f:facet>
+                    #{r.avgFares}
+                </h:column>
+			</h:dataTable>
+    		<br></br>
+    		<h:commandButton value="Compare to previous Simulator" action="#{resultBean.ComparePrev}">
+    			 <f:ajax render="@form" />
+    		</h:commandButton>
+    		<h:commandButton value="Compare to Simulator After" action="#{resultBean.CompareNext}">
+    			 <f:ajax render="@form" />
+    		</h:commandButton>
+    		<h:commandButton value="Go to Sim" action="#{resultBean.GoTo()}">
+    		</h:commandButton>
+    		<br></br>
+    		<h:outputLabel style="color: #F00;" value="#{resultBean.compareSim}" ></h:outputLabel>
+    	</div>
+    	</h:form>
+    	
     </h:body>
 </html>

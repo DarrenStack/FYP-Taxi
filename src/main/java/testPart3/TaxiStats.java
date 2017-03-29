@@ -15,37 +15,16 @@ public class TaxiStats {
 	private List<Taxi> allTaxis;
 	private ArrayList<String> requests;
 	
-	public TaxiStats(TaxiRank taxiList, int time , ArrayList<String> requests) throws SQLException{
+	public TaxiStats(TaxiRank taxiList, int time , ArrayList<String> requests,
+					String startTime , String dayOfWeek) throws SQLException{
 		this.taxiList = taxiList;
 		this.requests = requests;
 		maxFareTime = 0;
 		minFareTime = -1;
 		allTaxis = taxiList.getTaxis();
-		ArrayList<FareStats> fares;
-		double totalFareTimes = 0, count = 0, totalWaitTimes = 0;
-		Taxi taxi;
-		for(int i = 0;i < allTaxis.size();i++){
-			taxi = allTaxis.get(i);
-			fares = taxi.getFareStats();
-			for(int j = 0;j < fares.size();j++){
-				count++;
-				totalFareTimes += fares.get(0).getTripTime();
-				if (fares.get(0).getTripTime() > maxFareTime)
-					maxFareTime = fares.get(0).getTripTime();
-				if(fares.get(0).getTripTime() < minFareTime || minFareTime == -1)
-					minFareTime =  fares.get(0).getTripTime();
-				totalWaitTimes += fares.get(0).getPickupTime();
-				if (fares.get(0).getPickupTime() > maxWaitTime)
-					maxWaitTime = fares.get(0).getPickupTime();
-				if(fares.get(0).getPickupTime() < minWaitTime || minWaitTime == -1)
-					minWaitTime =  fares.get(0).getPickupTime();			
-			}
-		}
-		averageWaitTime = totalWaitTimes / count;
-		averageTripTime = totalFareTimes / count;
 		
 		db = new DatabaseManager();
-		db.addSimulator(time);
+		db.addSimulator(time, startTime , dayOfWeek);
 		SimID = db.getNewSimID();
 		uploadStats();
 	}

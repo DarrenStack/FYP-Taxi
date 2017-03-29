@@ -8,28 +8,42 @@
     <h:head>
         <title>Create Simulator</title>
     </h:head>
+    <h:outputStylesheet  name="style.css"></h:outputStylesheet>
     <h:body>
-    	<h2>Customise Simulator</h2>
+    	<h1>Customise Simulator</h1>
+    	<div class="customise">
     	<h:form>
-    	   How many taxis would you like in your simulator?
+    	    <p>How many taxis would you like in your simulator?
     	   <h:inputText validatorMessage="Please enter taxi number between 1 and 100" value="#{demoBean.taxis}">
     	   <f:validateLongRange minimum = "1" maximum = "100" />
     	   </h:inputText>
-    	   <br></br>
-    	   Enter a new taxi location:
+    	   </p>
+    	    <p>Enter a new taxi location:
     	   <h:inputText value="#{demoBean.startTaxi}"></h:inputText>
     	   <h:commandButton value="Add Location" action="#{demoBean.addStartLocation()}"></h:commandButton>
-    	   <br></br>
-    	   Enter Simulator bounds:
+    	   <h:outputLabel style="color: #F00;" value="#{demoBean.errorMessage}" ></h:outputLabel>
+    	   </p>
+    	    <p>Percentage of time willing to be added to fare to accommodate another:
     	   <h:inputText value="#{demoBean.percentage}"></h:inputText>
-    	   <br></br>
-    	   Enter Time of Day (24 HR):
+    	   </p>
+    	   <p>Enter Time of Day (24 HR):
     	   <h:inputText validatorMessage="Please enter time in HH:MM format" value="#{demoBean.startTime}">
     	   <f:validateRegex pattern = "([2][0-3]|[01]?[0-9])([:][0-5][0-9])" />
     	   </h:inputText>
+    	   </p><p>Please select a day of the week:
+    	   <h:selectOneMenu value="#{demoBean.dayOfWeek}">
+					<f:selectItem itemValue="1" itemLabel="Monday" />
+					<f:selectItem itemValue="2" itemLabel="Tuesday" />
+					<f:selectItem itemValue="3" itemLabel="Wednesday" />
+					<f:selectItem itemValue="4" itemLabel="Thursday" />
+					<f:selectItem itemValue="5" itemLabel="Friday" />
+					<f:selectItem itemValue="6" itemLabel="Saturday" />
+					<f:selectItem itemValue="7" itemLabel="Sunday" />
+				</h:selectOneMenu></p>
     	   <br></br>
     	   <br></br>
     	   <h:commandButton value="Initiate Simulator" action="#{demoBean.Initiate()}"></h:commandButton>
     	</h:form>
+    	</div>
     </h:body>
 </html>

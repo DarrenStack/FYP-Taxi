@@ -5,19 +5,24 @@ public class Multiples {
 	private int amount , amountLeft;
 	private double secondsLeft;
 	private double secondsAdded;
-	private String origin;
+	private double rate;
+	private String origin , randomPass;
 	private String destination , willingToShare,  method, 
 			trafficModel, numberOfPassengers;
 	
 	public Multiples(int numOfRequests , int minutes , String willingToShare , 
-			String origin, String destination, String num , String trafficModel){
+			String origin, String destination, String num ,
+			 String randomPass , String trafficModel){
 		secondsLeft = minutes * 60;
 		amount = numOfRequests;
+		rate = secondsLeft / amount;
+		System.out.println("rate " + rate);
 		this.willingToShare = willingToShare;
 		this.origin = origin;
 		this.destination = destination;
 		this.numberOfPassengers = num;
 		this.trafficModel = trafficModel;
+		this.randomPass = randomPass;
 		amountLeft = amount;
 		secondsAdded = 0;
 	}
@@ -68,7 +73,15 @@ public class Multiples {
 	}
 	
 	public int getAmount(){
-		return (int) amount;
+		return (int) amountLeft;
+	}
+
+	public String getRandomPass() {
+		return randomPass;
+	}
+
+	public int getRate(){
+		return (int) Math.ceil(rate);
 	}
 	
 }

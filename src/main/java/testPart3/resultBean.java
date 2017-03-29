@@ -3,18 +3,24 @@ package testPart3;
 import java.io.Serializable;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.List;
 
 import javax.faces.bean.ManagedBean;
 import javax.faces.bean.RequestScoped;
+import javax.faces.bean.SessionScoped;
 
 @ManagedBean
-@RequestScoped
+@SessionScoped
 public class resultBean  implements Serializable{
 	
+	private static final long serialVersionUID = 1L;
+
 	DatabaseManager db;
 
-	private String simID;
-	private int sim;
+	private String simID , compareSim;
+	private int sim , compareSimID;
+	private resultStats initResult , compareResult;
+	private List<String> simList;
 	
 	public void Initiate() throws Exception{
 		//Initialize all variables
@@ -23,78 +29,47 @@ public class resultBean  implements Serializable{
 			sim = db.getNewSimID();
 			simID = sim + "";
 		}
-		else sim = Integer.parseInt(simID);
+		else{
+			sim = Integer.parseInt(simID);
+			if(sim > db.getNewSimID()){
+				compareSim = "No results available for Sim " + sim;
+				sim = db.getNewSimID();
+				simID = sim + "";
+			}
+		}
+		
+		System.out.println("Init" + compareSimID);
+			
+		if(compareSim == null){
+			compareSimID = sim - 1;
+			compareSim = "";
+			
+			simList = db.getSimList();
+		}
+		
+		
+		try{
+			initResult = new resultStats(sim , db);
+		}
+		catch(Exception e){
+			compareSim = "No results for simulator " + sim;
+			sim = db.getNewSimID();
+			simID = sim + "";
+			initResult = new resultStats(sim , db);
+		}
+		GetCompareResult();
 	}
 	
-	
-	public String GetMaxTaxiTime() throws SQLException {
-		System.out.println(simID);
-		return db.getTaxiTimeDetails("MAX(TimeMoving)" , sim);
-	}
-
-
-
-	public String GetMinTaxiTime() throws SQLException {
-		return db.getTaxiTimeDetails("MIN(TimeMoving)" , sim);
-	}
-
-
-
-	public String GetMaxFares() throws SQLException {
-		return db.getTaxiFareDetails("MAX(Fares)" , sim);
-	}
-
-
-
-	public String GetMinFares() throws SQLException {
-		return db.getTaxiFareDetails("MIN(Fares)" , sim);
-	}
-
-
-
-	public String GetAverageTaxiTime() throws SQLException {
-		return db.getTaxiTimeDetails("SEC_TO_TIME(AVG(TIME_TO_SEC(TimeMoving)))" , sim);
-	}
-
-
-
-	public String GetAverageFares() throws SQLException {
-		return db.getTaxiFareDetails("AVG(Fares)" , sim);
+	public resultStats getMainResult(){
+		return initResult;
 	}
 	
-	public String GetMaxFareTime() throws SQLException {
-		System.out.println(simID);
-		return db.getFareDetails("MAX(TimeTaken)" , sim);
+	public String GetSimTimeOfDay() throws SQLException{
+		return db.getSimTime("TimeOfDay" , sim);
 	}
-
-
-
-	public String GetMinFareTime() throws SQLException {
-		return db.getFareDetails("MIN(TimeTaken)" , sim);
-	}
-
-
-
-	public String GetMaxWaitTime() throws SQLException {
-		return db.getFareDetails("MAX(TimeWaited)" , sim);
-	}
-
-
-
-	public String GetMinWaitTime() throws SQLException {
-		return db.getFareDetails("MIN(TimeWaited)" , sim);
-	}
-
-
-
-	public String GetAverageWaitTime() throws SQLException {
-		return db.getFareDetails("SEC_TO_TIME(AVG(TIME_TO_SEC(TimeWaited)))" , sim);
-	}
-
-
-
-	public String GetAverageTripTime() throws SQLException {
-		return db.getFareDetails("SEC_TO_TIME(AVG(TIME_TO_SEC(TimeTaken)))" , sim);
+	
+	public String GetSimDayOfWeek() throws SQLException{
+		return db.getSimDay(sim);
 	}
 	
 	public String getSimID() {
@@ -106,9 +81,93 @@ public class resultBean  implements Serializable{
 	}
 	
 	public String GetSimTime() throws SQLException{
-		return db.getSimTime(sim);
+		return db.getSimTime("Duration" , sim);
 	}
 
+	public resultStats GetCompareResult() throws SQLException{
+		System.out.println("Now here:"+compareSim);
+		try{
+		compareResult = new resultStats(compareSimID , db);
+		return compareResult;
+		}
+		catch(NullPointerException e){
+			compareSim = "No results for available for " + compareSimID;
+			compareSimID = db.getNewSimID();
+			compareResult = new resultStats(compareSimID , db);
+			
+			return compareResult;
+		}
+	}
 	
+	public List<String> GetListOfSimulators(){
+		return simList;
+	}
 
+	public List<String> getSimList() {
+		return simList;
+	}
+
+	public void setSimList(List<String> simList) {
+		this.simList = simList;
+	}
+	
+	public void ComparePrev(){
+		int newNum;
+		newNum = compareSimID;
+		if(newNum - 1 <= 0){
+			compareSim = "This is the oldest result, no further results";
+		}
+		else{
+			compareSim = "";
+			compareSimID--;
+		}
+		System.out.println("Here" + compareSimID);
+	}
+	
+	public void CompareNext() throws SQLException{
+		int newNum;
+		newNum = compareSimID;
+		if(newNum + 1 > db.getNewSimID()){
+			compareSim = "This is the most recent result, no further results";
+		}
+		else{
+			compareSim = "";
+			compareSimID++;
+		}
+		
+	}
+
+	public String getCompareSim() {
+		return compareSim;
+	}
+
+	public void setCompareSim(String compareSim) {
+		this.compareSim = compareSim;
+	}
+	
+	public void finished(){
+		simID = null;
+		compareSim = null;
+	}
+	
+	public String GetCompSimTimeOfDay(){
+		return compareResult.getSimTimeOfDay();
+	}
+	
+	public String GetCompSimDayOfWeek(){
+		return compareResult.getSimDayOfWeek();
+	}
+	
+	public String GetCompSimID(){
+		return "" + compareSimID;
+	}
+	
+	public String GetCompSimTime() throws SQLException{
+		return db.getSimTime("Duration" , compareSimID);
+	}
+	
+	public String GoTo() {
+		simID = "" + compareSimID;
+		return "results?simID=" + compareSimID;
+	}
 }

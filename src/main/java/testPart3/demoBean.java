@@ -375,10 +375,17 @@ public class demoBean  implements Serializable {
 			//and requests them at the same times with these new conditions
 			Update(requests.getInt(3) - totalTime);
 			share = "" + requests.getByte(8);
+			if(requests.getByte(8) == 0)
+				share = "false";
+			else 
+				share = "true";
 			passNum = "" + requests.getInt(6);
 			pickupPoint = requests.getString(4);
 			dropoffPoint = requests.getString(5);
-			method = "" + requests.getInt(7);
+			if( requests.getInt(7) == 0)
+				method = "false";
+			else 
+				method = "true";
 			traffic = requests.getString(9);
 			Demo();
 			
@@ -575,7 +582,7 @@ public class demoBean  implements Serializable {
 		
 		Multiples mult = new Multiples(numberOfRequests , amountOfTime,
 										share , pickupPoint , dropoffPoint,
-										passNum , randomPass, traffic);
+										passNum , method , randomPass, traffic);
 		
 		multipleList.add(mult);
 		
@@ -623,12 +630,14 @@ public class demoBean  implements Serializable {
 	public String Redo(int simID) throws SQLException{
 		db = new DatabaseManager();
 		requests = db.getRequests(simID);
+		startList = new ArrayList<LatLng>();
 		redo = true;
 		return "setupSim";
 	}
 	
 	public String Redo() throws SQLException{
 		redo = false;
+		startList = new ArrayList<LatLng>();
 		return "setupSim";
 	}
 	

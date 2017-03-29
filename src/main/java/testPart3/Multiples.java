@@ -11,7 +11,7 @@ public class Multiples {
 			trafficModel, numberOfPassengers;
 	
 	public Multiples(int numOfRequests , int minutes , String willingToShare , 
-			String origin, String destination, String num ,
+			String origin, String destination, String num , String method ,
 			 String randomPass , String trafficModel){
 		secondsLeft = minutes * 60;
 		amount = numOfRequests;

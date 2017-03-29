@@ -395,9 +395,9 @@ public class Taxi {
 		bestRoute = DirectionsApi.getDirections(context, location,
 				fare.getDestination());
 		DirectionsRoute r = routeResult.routes[0];
-		String[] points = new String[r.legs.length - currentLeg + 1];
+		String[] points = new String[(r.legs.length - currentLeg) + 1];
 		for(int i = 0; i + currentLeg < r.legs.length;i++){
-			points[i] = r.legs[i].endAddress;
+			points[i] = r.legs[i+currentLeg].endAddress;
 		}
 		points[points.length-1] = fare.getOrigin();
 		
@@ -623,8 +623,8 @@ public class Taxi {
 		
 		int  stepMovement = 0;
 		
-		System.out.println("At leg " + currentLeg + " of " + r.legs.length +
-				"At step " + currentStep + " of " + r.legs[currentLeg].steps.length);
+		//System.out.println("At leg " + currentLeg + " of " + r.legs.length +
+			//	"At step " + currentStep + " of " + r.legs[currentLeg].steps.length);
 
 		for (int i = currentLeg; i < r.legs.length && !foundPoint; i++) {
 				l = r.legs[i];
@@ -814,13 +814,13 @@ public class Taxi {
 				//sets it up so there should be no offset so time is accurate
 				travelTime += (int)legLengths.get(i) - legTime;
 				secondsWithoutMovement += (int)legLengths.get(i) - legTime;
+				 legTime = legLengths.get(i);
 				currentLeg = i;
 				passengerUpdate(l.endAddress);
 				secondsWithoutMovement = 0;
 				currentStep = 0;
 				legTime = 0;
 			}
-			
 			
 			isActive = false;
 			update(0);

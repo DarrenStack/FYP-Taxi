@@ -25,7 +25,7 @@ public class resultBean  implements Serializable{
 	public void Initiate() throws Exception{
 		//Initialize all variables
 		db = new DatabaseManager();
-		if(simID == null){
+		if(simID == null || compareSim == null){
 			sim = db.getNewSimID();
 			simID = sim + "";
 		}
@@ -146,7 +146,6 @@ public class resultBean  implements Serializable{
 	}
 	
 	public void finished(){
-		simID = null;
 		compareSim = null;
 	}
 	
@@ -168,6 +167,6 @@ public class resultBean  implements Serializable{
 	
 	public String GoTo() {
 		simID = "" + compareSimID;
-		return "results?simID=" + compareSimID;
+		return "results?faces-redirect=true&simID=" + compareSimID;
 	}
 }

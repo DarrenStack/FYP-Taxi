@@ -16,6 +16,7 @@
 		<div class="details">
 		<h:outputLabel value="#{demoBean.closestStatus}" />	
 		<p>Sim Time = <h:outputLabel id="time" value="#{demoBean.time}" />
+		 <h:outputLabel style="color: #F00;" value="#{demoBean.errorMessage}" ></h:outputLabel>
 		</p>
 		<h2>Add your fare</h2>
     	   <p>Where would passengers like to be picked up?
@@ -54,22 +55,22 @@
 		</h:selectOneRadio>
 		</p>
 		<div class="oneRequest">
-		<h:commandButton value="Request One"  action="#{demoBean.Demo()}"></h:commandButton>
+		<h:commandButton id="one" value="Request One"  action="#{demoBean.Demo()}"></h:commandButton>
 		</div>
 		<div class="multRequest">
 		<p>
 		How many instances of this fare would you like to simulate?
-    	    <h:inputText value="#{demoBean.multiple}"></h:inputText>
+    	    <h:inputText required="#{param['form:one']==null}" value="#{demoBean.multiple}"></h:inputText>
 		</p><p>
 		Over how many minutes should these fares be called?
-    	    <h:inputText value="#{demoBean.multipleTime}"></h:inputText>
-   		
+    	    <h:inputText required="#{param['form:one']==null}" value="#{demoBean.multipleTime}"></h:inputText>		
  		</p><p>
  		Would you like the set number of passengers or a random number?
- 		<h:selectOneRadio required="true" value="#{demoBean.randomPass}">
+ 		<h:selectOneRadio required="#{param['form:one']==null}" value="#{demoBean.randomPass}">
 			<f:selectItem itemValue="false" itemLabel="Set Amount" />
 			<f:selectItem itemValue="true" itemLabel="Random Amount" />
 		</h:selectOneRadio>
+		
 		</p>
     	<h:commandButton value="Request Multiple" action="#{demoBean.Multiply()}"></h:commandButton>
 		</div>
@@ -125,7 +126,10 @@
 		<br></br>
 
 		<h:dataTable id="taxiStats" value="#{demoBean.getTaxiList()}" 
-			var="t">
+			var="t"
+			styleClass="table"
+    			headerClass="headers"
+    			rowClasses="rows">
 			<h:column>
 			<f:facet name="header">Taxi Number</f:facet>
                     #{t.number}

@@ -29,7 +29,7 @@ public class demoBean  implements Serializable {
 	private String pickupPoint , dropoffPoint , share, 
 	passNum , taxis , startTaxi, closestStatus 
 	, polyline , method , percentage , startTime , dayOfWeek ,
-	time , traffic , multiple , multipleTime , randomPass , errorMessage;
+	time , traffic , multiple , multipleTime , randomPass , errorMessage , backToHub;
 	private TaxiRank taxiList;
 	private TaxiStats taxiStatistics;
 	private ArrayList<LatLng> startList = new ArrayList<LatLng>();
@@ -38,12 +38,26 @@ public class demoBean  implements Serializable {
 	private GeoApiContext context = new GeoApiContext();
 	private int totalTime;
 	private double benchmark;
-	private boolean redo = false;
+	private boolean redo = false , moveToHub;
 	private ResultSet requests;
 	private DateTime timeOfSim;
 	
 	private DatabaseManager db;
 	
+
+	
+	
+	public String getBackToHub() {
+		return backToHub;
+	}
+
+
+
+	public void setBackToHub(String backToHub) {
+		this.backToHub = backToHub;
+	}
+
+
 
 	public String getPercentage() {
 		return percentage;
@@ -286,10 +300,17 @@ public class demoBean  implements Serializable {
 
 	public String Initiate() throws Exception{
 		//initialise all variables
+		if(startList.size() == 0){
+			errorMessage = "Please add at least one location";
+			return "setupSim";
+		}
+		errorMessage = "";
 		totalTime = 0;
 		db = new DatabaseManager();
 		requestDetails = new ArrayList<String>();
 		multipleList = new ArrayList<Multiples>();
+		
+		moveToHub = Boolean.parseBoolean( backToHub);
 		
 		//sets time of sim to time specified in customization
 		LocalTime timeOfDay = LocalTime.parse(startTime);
@@ -336,35 +357,33 @@ public class demoBean  implements Serializable {
 
 	public void Demo() throws Exception{
 		
-			
+			errorMessage = "";
 			String origins, destinations , trafficModel;
 			boolean sharing = Boolean.parseBoolean(share);
 			int passengerNum = Integer.parseInt(passNum);
 			// Allowing new fare to be created
-			origins =  pickupPoint ;
-			destinations = dropoffPoint ;
-			trafficModel = traffic; 
-			Fare f3 = new Fare(sharing, origins, destinations,
-								passengerNum , trafficModel , timeOfSim);
-	
-			String insertionString = totalTime+"--"+origins+"--"+destinations+
-					"--"+passengerNum;
-			
-			
-			if(Boolean.parseBoolean(method)){
+		if (validLocation(pickupPoint) && validLocation(dropoffPoint)) {
+			origins = pickupPoint;
+			destinations = dropoffPoint;
+			trafficModel = traffic;
+			Fare f3 = new Fare(sharing, origins, destinations, passengerNum, trafficModel, timeOfSim);
+
+			String insertionString = totalTime + "--" + origins + "--" + destinations + "--" + passengerNum;
+
+			if (Boolean.parseBoolean(method)) {
 				quickestPickup(f3);
 				insertionString += "--1";
-			}
-			else{
+			} else {
 				totalTime(f3);
 				insertionString += "--0";
 			}
-			//converts boolean to int
-			int val = sharing? 1 : 0;
+			// converts boolean to int
+			int val = sharing ? 1 : 0;
 			insertionString += "--" + val;
 			System.out.print(traffic);
-			insertionString += "--"+trafficModel;
+			insertionString += "--" + trafficModel;
 			requestDetails.add(insertionString);
+		}	
 				
 		
 	}
@@ -395,21 +414,21 @@ public class demoBean  implements Serializable {
 	
 	public void quickestPickup(Fare f3) throws Exception{
 		Taxi t;
-		int availableTaxis = 0;
 		ArrayList<Taxi> checked = new ArrayList<Taxi>();
 		// find closest taxi to the person
 		Long shortest = null, compare;
 		//System.out.println("Amount of taxis = " +  taxiList.getTaxiAmount());
 		int index = 0;
 		for (int i = 0; i < taxiList.getTaxiAmount(); i++) {
-			System.out.print(i);
+			
 			t = taxiList.getTaxi(i);
-			if (t.available(f3)) {
-				availableTaxis++;
+			if (t.isEmpty()) {
+				System.out.print(i + "Check");
 				int duplicate = (hasBeenChecked(t, checked));
+				
 				if (duplicate == -1) {
 					checked.add(t);
-
+					t.available(f3);
 					if (shortest == null) {
 						compare = t.evaluateFare(f3);
 						shortest = compare;
@@ -422,24 +441,43 @@ public class demoBean  implements Serializable {
 							shortest = compare;
 							index = i;
 						}
-					} else if (duplicate == index) {
-						Taxi t2 = taxiList.getTaxi(duplicate);
-						if (t2.getPassengerNum() > t.getPassengerNum())
-							index = i;
 					}
 				}
 			}
 		}
+		for (int i = 0; i < taxiList.getTaxiAmount(); i++) {
+			
+			t = taxiList.getTaxi(i);
+			if ((!t.isEmpty())) {
+				System.out.print(i + "Check");
+				t.available(f3);
+				int duplicate = (hasBeenChecked(t, checked));
+				if (duplicate == -1) {
+					checked.add(t);
+
+					if (shortest == null) {
+						compare = t.evaluateFare(f3);
+						shortest = compare;
+						index = i;
+						benchmark = t.getTaxiDistance(f3.getPickupLatLng());
+					} 
+					else if (isConsiderable(t, f3, benchmark)) {
+						System.out.println("\n" + t.getNumber() + " was considered");
+						compare = t.evaluateFare(f3);
+						if (compare < shortest) {
+							shortest = compare;
+							index = i;
+						}
+					}
+				}
+			}
+
+		}
 		if (!(shortest == null)) {
 			t = taxiList.getTaxi(index);
 			t.addFare(f3);
-			closestStatus = "The closest taxi is " + t.toString() + 
-							 ". Time to pickup: " + shortest;
+			closestStatus = "The closest taxi is " + t.toString();
 		}
-		else if(availableTaxis == 0)
-			closestStatus = "No taxis currently available, please try again later";
-		 else
-			closestStatus = "taxi is here";
 	}
 	
 	
@@ -453,43 +491,63 @@ public class demoBean  implements Serializable {
 		int index = 0;
 		//shortest = -1;
 		for (int i = 0; i < taxiList.getTaxiAmount(); i++) {
-			System.out.print(i);
+			
 			t = taxiList.getTaxi(i);
-			if(t.available(f3)){
-				availableTaxis++;
-				int duplicate = (hasBeenChecked(t , checked));
+			if (t.isEmpty()) {
+				System.out.print(i + "Check");
+				int duplicate = (hasBeenChecked(t, checked));
+				t.available(f3);
 				if (duplicate == -1) {
-					//so future taxis do not check it
 					checked.add(t);
-					
-					if(shortest == null){
-							compare = t.evaluateTotalLength(f3);
-							shortest = compare;
-							index = i;
-							benchmark = t.getTaxiDistance(f3.getPickupLatLng());
-					}
-					else if(isConsiderable(t , f3 , benchmark)){
-						System.out.println("\n" + t.getNumber() + " was considered");
-						compare = t.evaluateTotalLength(f3);
-						if (compare < shortest){				
-							shortest = compare;
-							index = i;
-					}
-						
-					}
-				}
-				else if(duplicate == index){
-					Taxi t2 = taxiList.getTaxi(duplicate);
-					if (t2.getPassengerNum() > t.getPassengerNum())
+
+					if (shortest == null) {
+						compare =  t.evaluateTotalLength(f3);
+						shortest = compare;
 						index = i;
+						benchmark = t.getTaxiDistance(f3.getPickupLatLng());
+					} else if (isConsiderable(t, f3, benchmark)) {
+						System.out.println("\n" + t.getNumber() + " was considered");
+						compare =  t.evaluateTotalLength(f3);
+						if (compare < shortest) {
+							shortest = compare;
+							index = i;
+						}
+					}
 				}
 			}
+		}
+		for (int i = 0; i < taxiList.getTaxiAmount(); i++) {
+			
+			t = taxiList.getTaxi(i);
+			if ((!t.isEmpty())) {
+				System.out.print(i + "Check");
+				t.available(f3);
+				int duplicate = (hasBeenChecked(t, checked));
+				if (duplicate == -1) {
+					checked.add(t);
+
+					if (shortest == null) {
+						compare =  t.evaluateTotalLength(f3);
+						shortest = compare;
+						index = i;
+						benchmark = t.getTaxiDistance(f3.getPickupLatLng());
+					} 
+					else if (isConsiderable(t, f3, benchmark)) {
+						System.out.println("\n" + t.getNumber() + " was considered");
+						compare = t.evaluateTotalLength(f3);
+						if (compare < shortest) {
+							shortest = compare;
+							index = i;
+						}
+					}
+				}
+			}
+
 		}
 		if (!(shortest == null)) {
 			t = taxiList.getTaxi(index);
 			t.addFare(f3);
-			closestStatus = "The closest taxi is " + t.toString() + 
-							 ". Time for overall fare: " + shortest;
+			closestStatus = "The closest taxi is " + t.toString();
 		}
 		else if(availableTaxis == 0)
 			closestStatus = "No taxis currently available, please try again later";
@@ -518,6 +576,17 @@ public class demoBean  implements Serializable {
 		Taxi t;
 		for (int i = 0; i < taxiList.getTaxiAmount(); i++) {
 			t = taxiList.getTaxi(i);
+			if(t.getIsActive() && t.isEmpty() && moveToHub && (!t.getTravelBack())){
+				double min = t.getTaxiDistance(startList.get(0));
+				int index = 0;
+				for(int j = 1; j < startList.size();j++){
+					if(t.getTaxiDistance(startList.get(j)) < min){
+						min = t.getTaxiDistance(startList.get(j));
+						index = j;
+					}
+				}
+				t.moveToHub(startList.get(index).toString(), timeOfSim);
+			}
 			if (t.getIsActive()){
 				t.update(secondsMoved);
 			}
@@ -555,23 +624,24 @@ public class demoBean  implements Serializable {
 		Double distance;
 		if(taxi.isEmpty()){
 			distance = taxi.getTaxiDistance(fare.getPickupLatLng());
-			if(distance < (benchmark * 1.5))
+			if(distance < (benchmark * 2) || distance < 2)
 				return true;
 			else
 				return false;
 		}
 		else{
 			distance = taxi.getTaxiDistance(fare.getPickupLatLng());
-			if(distance < (benchmark * 1.5))
+			if(distance < (benchmark * 2) || distance < 2)
 				return true;
 			
-			distance = taxi.haversine(fare.getPickupLatLng().toString() , taxi.getDestLatLng());
+			/*distance = taxi.haversine(fare.getPickupLatLng().toString() , taxi.getDestLatLng());
 			distance += taxi.getTaxiDistance(fare.getPickupLatLng());
 			if(distance < (benchmark * 1.5))
 				return true;
-			
+			*/
 			return false;
 			//return taxi.between(fare.getPickupLatLng());
+			
 		}
 	}
 	
@@ -639,6 +709,24 @@ public class demoBean  implements Serializable {
 		redo = false;
 		startList = new ArrayList<LatLng>();
 		return "setupSim";
+	}
+	
+	public boolean validLocation(String input){
+		context.setApiKey("AIzaSyCpto6czmXSCmH6FzaiHsX1OmuTi96ZRLE"); 
+		GeocodingResult[] results;
+		try {
+			results = com.google.maps.GeocodingApi.geocode(context, input).await();
+			if(results[0].geometry.location != null)
+				return true;
+			else{
+				errorMessage += "'" + input + "' is not a valid Location. ";
+				return false;		
+			}
+		} catch (Exception e) {
+			
+			errorMessage += "'" +input + "' is not a valid Location. ";
+			return false;
+		}
 	}
 	
 }

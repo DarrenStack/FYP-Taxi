@@ -12,7 +12,7 @@
     <h:body>
     	<h1>Customise Simulator</h1>
     	<div class="customise">
-    	<h:form>
+    	<h:form id="form">
     	    <p>How many taxis would you like in your simulator?
     	   <h:inputText validatorMessage="Please enter taxi number between 1 and 100" value="#{demoBean.taxis}">
     	   <f:validateLongRange minimum = "1" maximum = "100" />
@@ -20,7 +20,7 @@
     	   </p>
     	    <p>Enter a new taxi location:
     	   <h:inputText value="#{demoBean.startTaxi}"></h:inputText>
-    	   <h:commandButton value="Add Location" action="#{demoBean.addStartLocation()}"></h:commandButton>
+    	   <h:commandButton id="add" value="Add Location" action="#{demoBean.addStartLocation()}"></h:commandButton>
     	   <h:outputLabel style="color: #F00;" value="#{demoBean.errorMessage}" ></h:outputLabel>
     	   </p>
     	    <p>Percentage of time willing to be added to fare to accommodate another:
@@ -40,7 +40,14 @@
 					<f:selectItem itemValue="6" itemLabel="Saturday" />
 					<f:selectItem itemValue="7" itemLabel="Sunday" />
 				</h:selectOneMenu></p>
-    	   <br></br>
+			<p>
+				Should taxi move back to Initial Location after fare?
+				<h:selectOneRadio required="#{param['form:add']==null}" value="#{demoBean.backToHub}">
+					<f:selectItem itemValue="true" itemLabel="Yes" />
+					<f:selectItem itemValue="false" itemLabel="No" />
+				</h:selectOneRadio>
+			</p>
+			<br></br>
     	   <br></br>
     	   <h:commandButton value="Initiate Simulator" action="#{demoBean.Initiate()}"></h:commandButton>
     	</h:form>

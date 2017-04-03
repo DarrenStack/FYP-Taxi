@@ -38,7 +38,7 @@ public class Taxi {
 	//AIzaSyCpto6czmXSCmH6FzaiHsX1OmuTi96ZRLE
 	
 	private DirectionsResult routeResult , tempResult;
-	private boolean  empty , quickPick , isActive , validPickup , after;
+	private boolean  empty , quickPick , isActive , validPickup , after, travelBack;
 	private int size , number , passengers , currentLeg, currentStep,
 				  travelTime , totalTime , legTime;
 	private String polyLine;
@@ -63,7 +63,7 @@ public class Taxi {
 	}
 	
 	public DirectionsApiRequest getBestRoute(Fare fare) throws Exception{
-		//finds best possible route for all stops in taxi
+		//finds best possible route  for all stops in taxi
 		System.out.print("a");
 		bestRoute = null;
 		tempLegs = new ArrayList<Long>();
@@ -112,6 +112,7 @@ public class Taxi {
 			routeOrigins[0]=fare.getOrigin(); routeDest[0]=fare.getOrigin();
 			routeOrigins[1]=fare.getDestination(); routeDest[1]=fare.getDestination();
 			
+			//adding new fare points
 			originPoints.add(0);
 			destPoints.add(1);
 			
@@ -129,7 +130,7 @@ public class Taxi {
 					originPoints.add(count);
 					count++;
 				}
-				
+				//only adds origins/destination that are valid
 				positionTracker.add(count, (2*(k+1)) + 1);
 				destPoints.add(count);
 				count++;
@@ -442,6 +443,9 @@ public class Taxi {
 	}
 	
 	public void addFare(Fare fare) throws Exception{
+		travelBack = false;
+		
+		
 		isActive = true;
 		passengers += fare.getNumberOfPassengers();
 		
@@ -579,6 +583,7 @@ public class Taxi {
 		passengers -= fare.getNumberOfPassengers();
 		if(passengers == 0)
 			empty = true;
+		legTime = 0;
 	}
 	
 	public boolean isEmpty(){
@@ -611,7 +616,7 @@ public class Taxi {
 		DirectionsLeg l;
 		boolean foundPoint = false;
 		if(isActive){
-			if(Fares.size() == 0){
+			if(Fares.size() == 0 && travelBack == false){
 				isActive = false;
 				foundPoint = true;
 			} else {
@@ -622,6 +627,10 @@ public class Taxi {
 		}
 		
 		int  stepMovement = 0;
+		
+		if(travelBack){
+			System.out.println("TravelBack LegTime = " + legTime + " of " + legLengths.get(0) );
+		}
 		
 		//System.out.println("At leg " + currentLeg + " of " + r.legs.length +
 			//	"At step " + currentStep + " of " + r.legs[currentLeg].steps.length);
@@ -690,12 +699,16 @@ public class Taxi {
 						
 				}
 		}
+				
 		
 		if (!foundPoint){
 			
 			location = r.legs[(r.legs.length - 1)].endLocation.toString();
 			System.out.println(secondsWithoutMovement + "Finished");
-			passengerUpdate(r.legs[(r.legs.length - 1)].endAddress);
+			if(!travelBack)
+				passengerUpdate(r.legs[(r.legs.length - 1)].endAddress);
+			else
+				isActive = false;
 			polyLine = "";
 			
 		}
@@ -749,7 +762,21 @@ public class Taxi {
 			  destinations = new String[1];
 			  destinations[0] = fare.getOrigin();
 			  
-			  DistanceMatrix matrix=DistanceMatrixApi.getDistanceMatrix(context, origins, destinations).await();
+			  DistanceMatrixApiRequest request = DistanceMatrixApi.getDistanceMatrix(context, origins, destinations);
+				
+				
+				request.departureTime(fare.getTime());
+				if(fare.getTrafficModel().equals("PESSIMISTIC"))
+					request.trafficModel(TrafficModel.PESSIMISTIC);
+				else if(fare.getTrafficModel().equals("OPTIMISTIC"))
+					request.trafficModel(TrafficModel.OPTIMISTIC);
+				else
+					request.trafficModel(TrafficModel.BEST_GUESS);
+				
+				request.mode(TravelMode.DRIVING);
+				
+				DistanceMatrix matrix= request.await();
+				
 			  shortest = matrix.rows[0].elements[0].duration.inSeconds;
 			  System.out.println("Taxi Num: " + number + "  Time: " + shortest);
 			  return shortest;
@@ -814,9 +841,10 @@ public class Taxi {
 				//sets it up so there should be no offset so time is accurate
 				travelTime += (int)legLengths.get(i) - legTime;
 				secondsWithoutMovement += (int)legLengths.get(i) - legTime;
-				 legTime = legLengths.get(i);
+				legTime = legLengths.get(i);
 				currentLeg = i;
-				passengerUpdate(l.endAddress);
+				if(!travelBack)
+					passengerUpdate(l.endAddress);
 				secondsWithoutMovement = 0;
 				currentStep = 0;
 				legTime = 0;
@@ -830,6 +858,29 @@ public class Taxi {
 		
 	}
 	
+	public void moveToHub(String hubLocation , DateTime time) throws Exception{
+		routeResult = DirectionsApi.getDirections(context, location,
+				hubLocation).await();
+		travelBack = true;
+		String[] origins = new String[]{location};
+		String[] destinations = new String[]{hubLocation};
+		DistanceMatrixApiRequest request = DistanceMatrixApi.getDistanceMatrix(context, origins, destinations);
+		
+		
+		request.departureTime(time);
+		request.trafficModel(TrafficModel.BEST_GUESS);
+		
+		request.mode(TravelMode.DRIVING);
+		
+		DistanceMatrix matrix= request.await();
+		
+		long distanceToHub =  matrix.rows[0].elements[0].durationInTraffic.inSeconds;
+		legTime = 0;
+		currentLeg = 0;
+		currentStep = 0;
+		legLengths.clear();
+		legLengths.add((int) distanceToHub);
+	}
 	
 	public String toString(){
 		String result = "Taxi number " + number + ". It has " + passengers + " passengers";
@@ -885,5 +936,7 @@ public class Taxi {
 	public int getPassengerNum(){
 		return passengers;
 	}
-	
+	public boolean getTravelBack(){
+		return travelBack;
+	}
 }
